@@ -1,4 +1,4 @@
-\# WoWThreadsLib  
+# WoWThreadsLib  
 
 A lightweight, embeddable coroutine-based threading library for World of Warcraft addons.
 
@@ -14,11 +14,11 @@ For information about the standalone addon, its UI features, and player-facing f
 
 see the \*\*WoWThreads README\*\* in the main WoWThreads repository.
 
-\---
+---
 
 
 
-\## Overview
+## Overview
 
 
 

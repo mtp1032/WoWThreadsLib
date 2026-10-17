@@ -5,10 +5,10 @@ This manual constitutes the quasi-formal description of each public service (fun
 thread_h, result = thread:create( yieldTicks, func [,...] )
 
 #### Description:
-Creates a reference to an executable thread called a 
-thread handle. The thread handle is an opaque reference to the 
-thread's coroutine. The thread handle is used by the library's 
-internals to manage and schedule the thread.
+Creates a reference to an executable thread. The reference is called a 
+thread handle and is an opaque reference to the thread's coroutine and 
+its attributes. The thread handle is used by the library's internals to 
+manage and schedule the thread.
 
 #### Parameters:
 - yieldTicks (number). The duration of time the calling thread is to
