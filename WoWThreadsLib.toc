@@ -1,0 +1,18 @@
+## Interface: 100207
+## Title: WoWThreadsLib
+## Notes: Embedded coroutine-based threading library for World of Warcraft addons.
+## Author: Michael T. Peterson
+## Version: 0.1.0
+## X-Category: Library
+## X-Website: https://github.com/mtp1032/WoWThreadsLib
+## X-Source-Project: WoWThreads (standalone addon)
+## X-Source-URL: https://github.com/mtp1032/WoWThreads
+
+# Localization
+Libs\Localizations.lua
+
+# The library's Lua files
+Libs\LibStub.lua
+Libs\Utils.lua
+Libs\SignalQueue.lua
+Libs\WoWThreadsLib.lua
