@@ -1,24 +1,20 @@
 --=================================================================================
--- Filename: WoWThreads.lua
--- Date: 9 March, 2021
--- ORIGINAL DATE: 9 March, 2021
+-- Filename: WoWThreadsLib.lua
+-- Author: Michael Peterson
+-- Date: October, 2026
 --=================================================================================
---                      ADMIN, HOUSEKEEPING STUFF
-WoWThreads = WoWThreads or {}
+local ADDON_NAME, ns = ...
 
-if not WoWThreads.SignalQueue.loaded then
-    DEFAULT_CHAT_FRAME:AddMessage("SignalQueue.lua not loaded", 1, 0, 0)
-    return
-end
-local core  = WoWThreads.Core
-local utils = WoWThreads.UtilsLib
-local L     = WoWThreads.Locales.L
-local sig	= WoWThreads.SignalQueue
+WoWThreadsLib = WoWThreadsLib or {}
+
+local utils = WoWThreadsLib.UtilsLib
+local L = ns.Locales
+print( L["ADDON_LOADED_MSG"])
+local sig	= WoWThreadsLib.SignalQueue
 
 --=============== Create As A Libstub Library ===========
--- Configure WoWThreads as a LibStub managed library
-local libName, _, _, gitVersion = core:getAddonInfo()
-local thread, oldVersion = LibStub:NewLibrary(libName, gitVersion)
+-- Configure WoWThreadsLib as a LibStub managed library
+local thread, oldVersion = LibStub:NewLibrary( "WoWThreadsLib", "0.1.0" )
 if not thread then return end  -- no upgrade needed
 --=======================================================
 
@@ -33,8 +29,8 @@ local THREAD_SEQUENCE_ID     = 4 -- a number representing the order in which the
 local ACCUMULATED_TICKS      = 0 -- The system-wide, total number of clock ticks
 
 
-WoWThreads.morgue	= {}
-local morgue = WoWThreads.morgue
+WoWThreadsLib.morgue	= {}
+local morgue = WoWThreadsLib.morgue
 
 local threadControlBlock    = {} -- Table to hold all running and suspended threads
 local threadSleepTable      = {} -- Table to hold sleeping threads
@@ -540,7 +536,7 @@ end
 Signature: addonName, result = thread:getAddonName( [thread_h] )
 Description: Obtains the name of the addon within which the specified
 thread was created. If thread_h is nil, the addon name of the calling
-thread is returned. Because WoWThreads is a library of services shared
+thread is returned. Because WoWThreadsLib is a library of services shared
 among multiple addons, the thread's addon name serves to distinguish
 threads by the addon within which they were created. This may prove
 useful when implementing shared callbacks.
@@ -1215,17 +1211,16 @@ eventFrame:RegisterEvent("PLAYER_LOGIN")
 
 local function OnEvent(self, event, ...)
     local ADDON_NAME = select(1, ...)
-    local addonName = core:getAddonInfo()
-    if event == "ADDON_LOADED" and ADDON_NAME == addonName then
+    if event == "ADDON_LOADED" and ADDON_NAME == "WoWThreadsLib" then
 		if not WOWTHREADS_SAVED_VARS.debuggingIsEnabled then WOWTHREADS_SAVED_VARS.debuggingIsEnabled = false end
         if not WOWTHREADS_SAVED_VARS.dataCollectionIsEnabled then WOWTHREADS_SAVED_VARS.dataCollectionIsEnabled = false end
 
-		DEFAULT_CHAT_FRAME:AddMessage(L["ADDON_LOADED_MESSAGE"], 0.0, 1.0, 0)
-        eventFrame:UnregisterEvent("ADDON_LOADED")
+		DEFAULT_CHAT_FRAME:AddMessage(L["ADDON_LOADED_MSG"], 0.0, 1.0, 0)
+        eventFrame:UnregisterEvent( "ADDON_LOADED" )
         WoWThreadsLibInit() -- Assuming this is defined elsewhere
     end
 end
 eventFrame:SetScript("OnEvent", OnEvent)
 
-WoWThreads.loaded = true
+WoWThreadsLib.loaded = true
 return WoWThreads

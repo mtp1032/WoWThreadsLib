@@ -1,12 +1,14 @@
+--=================================================================================
 -- Filename: SignalQueue.lua
+-- Author: Michael Peterson
+-- Date: October, 2026
+--=================================================================================
+local ADDON_NAME, ns = ...
 
-WoWThreads = WoWThreads or {}
-WoWThreads.SignalQueue = WoWThreads.SignalQueue or {}
+WoWThreadsLib = WoWThreadsLib or {}
+WoWThreadsLib.SignalQueue = WoWThreadsLib.SignalQueue or {}
 
-if not WoWThreads.UtilsLib.loaded then
-    DEFAULT_CHAT_FRAME:AddMessage("UtilsLib.lua not loaded.", 1, 0, 0 )
-end
-local signal = WoWThreads.SignalQueue
+local signal = WoWThreadsLib.SignalQueue
 
 -- SignalQueue class definition
 local SignalQueue = {}
@@ -71,5 +73,3 @@ end
 function SignalQueue:size()
     return self.rear - self.front + 1
 end
-WoWThreads.SignalQueue.loaded = true
-return WoWThreads.SignalQueue

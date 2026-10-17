@@ -1,14 +1,17 @@
--- UtilsLib.lua
-WoWthreads = WoWthreads or {}
-WoWThreads.UtilsLib = WoWThreads.UtilsLib or {}
+--=================================================================================
+-- Filename: UtilsLib.lua
+-- Author: Michael Peterson
+-- Date: October, 2026
+--=================================================================================
+local ADDON_NAME, ns = ...
 
-if not WoWThreads.Locales.loaded then
-    DEFAULT_CHAT_FRAME:AddMessage("Localizations.lua not loaded", 1, 0, 0 )
-    return
-end
+WoWThreadsLib = WoWThreadsLib or {}
+WoWThreadsLib.UtilsLib = WoWThreadsLib.UtilsLib or {}
 
-local utils = WoWThreads.UtilsLib
-local L = WoWThreads.Locales.L
+local utils = WoWThreadsLib.UtilsLib
+local L = ns.Locales
+print( L["ADDON_LOADED_MSG"])
+
 
 -- =================================================
 --              PROLOGUE
@@ -309,6 +312,3 @@ function utils:dbgPrint(...)
     -- Directly call the global print function
     DEFAULT_CHAT_FRAME:AddMessage(output)
 end
-
-WoWThreads.UtilsLib.loaded = true
-return WoWThreads.UtilsLib
