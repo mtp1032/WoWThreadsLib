@@ -4,24 +4,20 @@
 -- Date: October, 2026
 --=================================================================================
 local ADDON_NAME, ns = ...
-
 WoWThreadsLib = WoWThreadsLib or {}
 
+local global = ns.Globals
+local post = ns.PostMessages
 local utils = WoWThreadsLib.UtilsLib
-local L = ns.Locales
-print( L["ADDON_LOADED_MSG"])
+local L     = ns.Locales
 local sig	= WoWThreadsLib.SignalQueue
 
 --=============== Create As A Libstub Library ===========
 -- Configure WoWThreadsLib as a LibStub managed library
-local thread, oldVersion = LibStub:NewLibrary( "WoWThreadsLib", "0.1.0" )
+local gitVersion = global:getAddonInfo()
+local thread, oldVersion = LibStub:NewLibrary( "WoWThreadsLib", gitVersion )
 if not thread then return end  -- no upgrade needed
 --=======================================================
-
-WOWTHREADS_SAVED_VARS = {
-	debuggingIsEnabled = nil,
-	dataCollectionIsEnabled = nil
-}
 --                                  LOCAL DATA
 local CURRENT_RUNNING_THREAD = nil
 local DEFAULT_YIELD_TICKS    = 1
@@ -39,6 +35,8 @@ local morgue                = {} -- Table to hold the dead threads
 
 local CLOCK_INTERVAL         = 1/GetFramerate() -- approx 16.7 ms on a 60Hz system
 local WoWThreadsStarted      = false
+local debuggingIsEnabled     = false
+local dataCollectionIsEnabled = true
 -- =====================================================================
 --                      NUMERIC CONSTANTS
 -- =====================================================================
@@ -147,12 +145,10 @@ local function transformErrorString(errorString)
     return errorMsg
 end 
 local function dbgLog( msg ) -- use debugstack(2)
-    if WOWTHREADS_SAVED_VARS.debuggingIsEnabled then
-
-		local newMsg = string.format("[LOG] %s \n", msg )
-		utils:postMsg( newMsg )
-			-- DEFAULT_CHAT_FRAME:AddMessage( newMsg, 0.0, 1.0, 1.0 )
-	end
+    if dataCollectionIsEnabled then
+        local newMsg = string.format("[LOG] %s \n", msg )
+        post:message( newMsg )
+    end
 end
 
 local function setResult(errorMsg, fname, stackTrace)
@@ -258,10 +254,9 @@ local function moveToMorgue( H, normalCompletion )
 				if normalCompletion then
 					table.insert( morgue, H)
 					msg = string.format("Thread[%d] Normal termination. Moved thread from TCB to morgue.", H[TH_UNIQUE_ID] )
-					if WOWTHREADS_SAVED_VARS.dataCollectionIsEnabled then
-						H[TH_ELAPSED_TIME] = debugprofilestop() - H[TH_ELAPSED_TIME]
-						H[TH_ELAPSED_TICKS] = ACCUMULATED_TICKS - H[TH_ELAPSED_TICKS]
-					end
+                    H[TH_ELAPSED_TIME] = debugprofilestop() - H[TH_ELAPSED_TIME]
+                    H[TH_ELAPSED_TICKS] = ACCUMULATED_TICKS - H[TH_ELAPSED_TICKS]
+                    dbgLog( msg )
 				else
 					msg = string.format("*** ABNORMAL termination ***. Thread[%d] no longer exists.", H[TH_UNIQUE_ID])
 					H[TH_COROUTINE] = nil
@@ -272,7 +267,7 @@ local function moveToMorgue( H, normalCompletion )
 			end
 		end
 
-		if WOWTHREADS_SAVED_VARS.debuggingIsEnabled then
+		if debuggingIsEnabled then
 			dbgLog( msg )
 		end
 end
@@ -302,26 +297,19 @@ local function moveToSleepTable( H )
 end
 
 local function handleIsValid(H)
-    local isValid = true
-    local errorMsg = nil
+    local isValid = false
 
     if type(H) ~= "table" then
-        errorMsg =L["INVALID_TYPE"]
-        isValid = false
-        return isValid, errorMsg
+        return isValid, L["INVALID_TYPE"]
     end
     if type(H[TH_SIGNAL_QUEUE]) ~= "table" then
-        errorMsg = L["INVALID_TYPE"]
-        isValid = false
-        return isValid, errorMsg
+        return isValid, L["INVALID_TYPE"]
     end
     if type(H[TH_COROUTINE]) ~= "thread" then
-        errorMsg = L["THREAD_NO_COROUTINE"]
-        isValid = false
-        return isValid, errorMsg
+        return isValid, L["THREAD_NO_COROUTINE"]
     end
 
-    return isValid, errorMsg
+    return true, nil
 end
 local function signalIsValid(signal)
     if signal == nil then
@@ -339,7 +327,7 @@ local function signalIsValid(signal)
     return true, nil
 end
 local function resumeOnError()
-
+-- empty
 end
 local function resumeThread(H)
     local co = H[TH_COROUTINE]
@@ -424,15 +412,11 @@ local function startTimer(CLOCK_INTERVAL)
             end
         )
 end
-local function WoWThreadsLibInit( addonName )
+function thread:libInit( addonName )
     if not WoWThreadsStarted then
         startTimer( 1/GetFramerate() )
     end
     WoWThreadsStarted = true
-end
-local function extractAddonName(stacktrace)
-    local addonName = string.match(stacktrace, "AddOns/([^/]+)/")
-    return addonName
 end
 
 --================================================================
@@ -440,27 +424,23 @@ end
 --================================================================
 
 function thread:debuggingIsEnabled()
-    return WOWTHREADS_SAVED_VARS.debuggingIsEnabled
+    return debuggingIsEnabled
 end
 function thread:enableDebugging()
-    WOWTHREADS_SAVED_VARS.debuggingIsEnabled = true
+    debuggingIsEnabled = true
 	-- utils:postMsg( string.format("%s\n", "Error logging enabled\n"))
 end
 function thread:disableDebugging()
-    WOWTHREADS_SAVED_VARS.debuggingIsEnabled = false
-	-- utils:postMsg( string.format("%s\n","Error logging disabled\n"))
+    debuggingIsEnabled = false
 end
 function thread:dataCollectionIsEnabled()
-    return WOWTHREADS_SAVED_VARS.dataCollectionIsEnabled
+    return dataCollectionIsEnabled
 end
 function thread:enableDataCollection()
-    WOWTHREADS_SAVED_VARS.dataCollectionIsEnabled = true
-	-- utils:postMsg( string.format("%s\n","Data collection enabled\n"))
-
+    dataCollectionIsEnabled = true
 end
 function thread:disableDataCollection()
-   WOWTHREADS_SAVED_VARS.dataCollectionIsEnabled = false
-	-- utils:postMsg( string.format("%s\n","Data collection disabled\n"))
+   dataCollectionIsEnabled = false
 end
 
 --[[@Begin 
@@ -499,28 +479,22 @@ function thread:create( yieldTicks, threadFunction,... )
     local result = nil
     local addonName = nil
 
-    if type( yieldTicks) ~= "number" then
-        errorMsg = L["INVALID_TYPE"]
-        result = setResult( errorMsg, fname, debugstack(2))
-        return nil, result
-    end
-    if threadFunction == nil then
-        errorMsg = L["PARAMETER_NIL"] .. "threadFunction() for thread:create()"
-        result = setResult( errorMsg, fname, debugstack(2))
-        return nil, result
-    end
     if type(threadFunction) ~= "function" then
-        errorMsg = L["INVALID_TYPE"]
-        result = setResult( errorMsg, fname, debugstack(2))
-        return nil, result
+        errorMsg = L["PARAMETER_NIL"] .. "Expected 'function'"
+        errorMsg = string.format("%s in %s.\nSTACK:\n%s,.", errorMsg, fname, debugstack(2))
+        return nil, errorMsg
     end
-
+    if type( yieldTicks) ~= "number" then
+        errorMsg = L["INVALID_TYPE"] .. "Expected 'number'"
+        errorMsg = string.format("%s in %s.\nSTACK:\n%s,.", errorMsg, fname, debugstack(2))
+        return nil, errorMsg
+    end
     parent_h = getHandleOfCallingThread()
 
 	-- If parent_h is nil, the caller must be the WoW game client whose 
 	-- addon name can be extracted from the stack trace.
     if parent_h == nil then 
-        addonName = extractAddonName( debugstack(2) )
+        addonName = ADDON_NAME
     else
         -- the caller  is a thread. Therefore, it has a parent thread from which the addon name is obtained.
         addonName = parent_h[TH_ADDON_NAME]
@@ -590,13 +564,7 @@ Usage:
 	end
 @End]]
 function thread:yield()
-
     coroutine.yield()  
-
-    if WOWTHREADS_SAVED_VARS.dataCollectionIsEnabled then  
-		H = CURRENT_RUNNING_THREAD
-        H[TH_RESUMPTIONS] = H[TH_RESUMPTIONS] + 1
-    end
 end
 
 -- Signature: hasCompleted, result - thread:hasCompleted( thread_h )
@@ -643,12 +611,6 @@ Usage:
 function thread:getMetrics( thread_h )
     local fname = "thread:getMetrics()"
     local result = nil
-
-	if not WOWTHREADS_SAVED_VARS.dataCollectionIsEnabled then
-		local msg = string.format("Data collection not enabled (see Options Menu).")
-		local result = setResult( msg, fname, debugstack(2))
-		return nil, result
-	end
 
     if thread_h == nil then
         result = setResult( L["THREAD_HANDLE_NIL"], fname, debugstack(2))
@@ -1203,24 +1165,6 @@ function thread:getNumPendingSignals()
     return H[TH_SIGNAL_QUEUE]:size(), nil
 end
 
--- Event handling
-local eventFrame = CreateFrame("Frame")
-eventFrame:RegisterEvent("ADDON_LOADED")
-eventFrame:RegisterEvent("PLAYER_LOGOUT")
-eventFrame:RegisterEvent("PLAYER_LOGIN")
-
-local function OnEvent(self, event, ...)
-    local ADDON_NAME = select(1, ...)
-    if event == "ADDON_LOADED" and ADDON_NAME == "WoWThreadsLib" then
-		if not WOWTHREADS_SAVED_VARS.debuggingIsEnabled then WOWTHREADS_SAVED_VARS.debuggingIsEnabled = false end
-        if not WOWTHREADS_SAVED_VARS.dataCollectionIsEnabled then WOWTHREADS_SAVED_VARS.dataCollectionIsEnabled = false end
-
-		DEFAULT_CHAT_FRAME:AddMessage(L["ADDON_LOADED_MSG"], 0.0, 1.0, 0)
-        eventFrame:UnregisterEvent( "ADDON_LOADED" )
-        WoWThreadsLibInit() -- Assuming this is defined elsewhere
-    end
-end
-eventFrame:SetScript("OnEvent", OnEvent)
 
 WoWThreadsLib.loaded = true
 return WoWThreads
