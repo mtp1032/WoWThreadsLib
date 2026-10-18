@@ -10,8 +10,6 @@ WoWThreadsLib.UtilsLib = WoWThreadsLib.UtilsLib or {}
 
 local utils = WoWThreadsLib.UtilsLib
 local L = ns.Locales
-print( L["ADDON_LOADED_MSG"])
-
 
 -- =================================================
 --              PROLOGUE
