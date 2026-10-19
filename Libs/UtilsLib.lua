@@ -4,11 +4,9 @@
 -- Date: October, 2026
 --=================================================================================
 local ADDON_NAME, ns = ...
+ns.UtilsLib = ns.UtilsLib or {}
 
-WoWThreadsLib = WoWThreadsLib or {}
-WoWThreadsLib.UtilsLib = WoWThreadsLib.UtilsLib or {}
-
-local utils = WoWThreadsLib.UtilsLib
+local utils = ns.UtilsLib
 local L = ns.Locales
 
 -- =================================================
