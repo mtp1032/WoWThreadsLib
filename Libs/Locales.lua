@@ -30,14 +30,14 @@ if LOCALE == "enUS" then
 	L["INVALID_TYPE"]				= "Uknown or unexpected data type "
     L["PARAMETER_NIL"]  			= "Function Parameter nil "
 	L["INVALID_OPERATION"]			= "Operation not permitted "
-	L["THREAD_HANDLE_NIL"] 		    = "Thread handle nil "
+	L["THREAD_HANDLE_NIL"] 		    = "Thread handle was nil "
 	L["THREAD_NO_COROUTINE"]        = "Ill-formed thread handle. Does not reference a coroutine "
-    L["THREAD_INVALID_CONTEXT"]     = "Function failed because caller is the WoW client (WoW.exe) "
-	L["THREAD_HANDLE_ILL_FORMED"]	= "Ill-formed thread handle. Check table size. "
+    L["NO_THREAD_CONTEXT"]          = "Operation failed because caller is the WoW client (WoW.exe) "
+	L["THREAD_HANDLE_INVALID"]	    = "Ill-formed thread handle. "
     L["THREAD_NOT_COMPLETED"]       = "Thread has not yet completed. "
 
-	L["THREAD_COROUTINE_DEAD"]      = "Invalid handle. Thread has completed or failed. "
-    L["THREAD_NOT_FOUND"]           = "Thread not found. "
+	L["THREAD_HAS_COMPLETED"]       = "Thread has completed or failed. "
+    L["THREAD_NOT_FOUND"]           = "Thread handle not found. "
 
     -- Signal failure
 	L["SIGNAL_OUT_OF_RANGE"]	    = "Signal is out of range "
