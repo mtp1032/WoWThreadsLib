@@ -50,12 +50,10 @@ end
 
 -- retrieves the gitversion from the .toc and the expansion name.
 -- returns: gitversion, addonName = global:getAddonInfo()
-function global:getAddonInfo()
-    local majorVersion = C_AddOns.GetAddOnMetadata(ADDON_NAME, "X-MAJOR") or "0"
-    local minorVersion = C_AddOns.GetAddOnMetadata(ADDON_NAME, "X-MINOR") or "0"
-    local patchVersion = C_AddOns.GetAddOnMetadata(ADDON_NAME, "X-PATCH") or "0"
 
-    local gitVersion = string.format( "%s.%s.%s", majorVersion, minorVersion, patchVersion )
+
+function global:getLibInfo()
+    local gitVersion = string.format( "0.1.0" )
     local expansionName = getExpansionName()
     return gitVersion, expansionName
 end
