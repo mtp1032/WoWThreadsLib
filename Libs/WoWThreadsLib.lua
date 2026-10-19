@@ -14,7 +14,7 @@ local sig	= WoWThreadsLib.SignalQueue
 
 --=============== Create As A Libstub Library ===========
 -- Configure WoWThreadsLib as a LibStub managed library
-local gitVersion = global:getAddonInfo()
+local gitVersion = global:getLibInfo()
 local thread, oldVersion = LibStub:NewLibrary( "WoWThreadsLib", gitVersion )
 if not thread then return end  -- no upgrade needed
 --=======================================================
