@@ -5,18 +5,15 @@
 --=================================================================================
 local ADDON_NAME, ns = ...
 
-WoWThreadsLib = WoWThreadsLib or {}
-WoWThreadsLib.SignalQueue = WoWThreadsLib.SignalQueue or {}
-
-local signal = WoWThreadsLib.SignalQueue
+ns.SignalQueue = ns.SignalQueue or {}
+local sigQueue = ns.SignalQueue
 
 -- SignalQueue class definition
-local SignalQueue = {}
-SignalQueue.__index = SignalQueue
+sigQueue.__index = sigQueue
 
 -- Constructor
-function signal.new()
-    local self = setmetatable({}, SignalQueue)
+function sigQueue.new()
+    local self = setmetatable({}, sigQueue)
     self.front = 1
     self.rear = 0
     self.items = {}
@@ -26,7 +23,7 @@ end
 -- @brief: Adds an item to the rear of the queue
 -- @param: value
 -- @returns: None
-function SignalQueue:enqueue(value)
+function sigQueue:enqueue(value)
     self.rear = self.rear + 1
     self.items[self.rear] = value
 end
@@ -34,7 +31,7 @@ end
 -- @brief: removes an item from the front of the queue
 -- @param: None
 -- @returns: the removed value or nil if the queue is empty
-function SignalQueue:dequeue()
+function sigQueue:dequeue()
     if self:isEmpty() then
         return nil
     else
@@ -52,7 +49,7 @@ end
 -- @brief: Returns the first item in the queue without removing it
 -- @param: None
 -- @returns: the first item in the queue or nil if the queue is empty
-function SignalQueue:peek()
+function sigQueue:peek()
     if self:isEmpty() then
         return nil
     else
@@ -63,13 +60,13 @@ end
 -- @brief: Checks if the queue is empty
 -- @param: None
 -- @returns: true if the queue is empty, false otherwise
-function SignalQueue:isEmpty()
+function sigQueue:isEmpty()
     return self.front > self.rear
 end
 
 -- @brief: Returns the number of items in the queue
 -- @param: None
 -- @returns: the size of the queue
-function SignalQueue:size()
+function sigQueue:size()
     return self.rear - self.front + 1
 end
