@@ -7,11 +7,16 @@ local ADDON_NAME, ns = ...
 
 ns.Globals = ns.Globals or {}
 local global = ns.Globals
-
-   
+local gitVersion = "0.1.1"
+local MAJOR = 0
+local MINOR = 1
+local PATCH = 1
+local gitVersion = MAJOR * 10000 + MINOR * 100 + PATCH
+local localizedVersion = string.format("%d.%d.%d", MAJOR, MINOR, PATCH)  
 -----------------------------------------------------------------
 -- Private functions
 -----------------------------------------------------------------
+
 
 local EXPANSION_NAMES = {}
 local function addExpansionName(expansionLevel, name)
@@ -48,12 +53,9 @@ local function getExpansionName()
         or select(4, GetBuildInfo())
 end
 
--- retrieves the gitversion from the .toc and the expansion name.
 -- returns: gitversion, addonName = global:getAddonInfo()
-
-
 function global:getLibInfo()
-    local gitVersion = string.format( "0.1.0" )
     local expansionName = getExpansionName()
-    return gitVersion, expansionName
+    return gitVersion, localizedVersion, expansionName
 end
+

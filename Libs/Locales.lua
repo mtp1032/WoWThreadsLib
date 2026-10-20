@@ -20,7 +20,7 @@ end })
 ns.Locales.L = L
 local L = ns.Locales
 
-local gitVersion, expansionName = global:getAddonInfo()
+local _, localizedVersion, expansionName = global:getLibInfo()
 local LOCALE = GetLocale()
 if LOCALE == "enUS" then
     L["VERSION"]          = gitVersion
