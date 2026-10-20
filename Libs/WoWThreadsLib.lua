@@ -286,49 +286,6 @@ local function signalIsValid(signal)
 
     return true, nil
 end
-local function resumeOnError()
--- empty
-end
--- Old resume function
--- local function resumeThread(H)
---     local co            = H[TH_COROUTINE]
---     local args          = H[TH_COROUTINE_ARGS] or {} -- Ensure args is a table
---     H[TH_RESUMPTIONS]   = H[TH_RESUMPTIONS] + 1 
-
---     -- Define error handler for xpcall using debugstack
---     local function errorHandler(err)
---         return tostring(err) .. "\nStack trace:\n" .. debugstack(2)
---     end
-
---     -- make H the currently running thread (it contains the coroutine
---     -- being resumed)
--- 	CURRENTLY_RUNNING_THREAD = H
-
---     local xpcallResults = { xpcall(coroutine.resume, errorHandler, co, unpack(args)) }
---     CURRENTLY_RUNNING_THREAD = nil
-
---     local xpcallSucceeded = xpcallResults[1]
---     if not xpcallSucceeded then
---         moveToMorgue(H, false )
--- 		local logMsg = string.format( "%s thread[%d] xpcall failed: results: %s\n", utils:dbgPrefix(), H[TH_UNIQUE_ID], xpcallResults[2] )
---         dbgLog( logMsg )
---         return false, errorMsg
---     end
-
---     local coroutineSucceeded = xpcallResults[2]
---     if not coroutineSucceeded then
--- 		dbgLog(string.format("%s Thread[%d] XPCALL failed: %s", utils:dbgPrefix(), H[TH_UNIQUE_ID], tostring(xpcallResults[2]):gsub("\n", "\n  ")))        
---         return false, xpcallResults[3]
---     end
-
---     if coroutine.status(co) == "dead" then
---         dbgLog(string.format("%s Thread[%d] has completed", utils:dbgPrefix(), H[TH_UNIQUE_ID]))
---         moveToMorgue(H, true)
---         return true, nil
---     end
---     dbgLog(string.format("%s Thread[%d] resumed.", utils:dbgPrefix(), H[TH_UNIQUE_ID]))
---     return true, select(2, unpack(xpcallResults))
--- end
 -- new resume function
 local function resumeThread(H)
     local co   = H[TH_COROUTINE]
@@ -393,28 +350,30 @@ local function resumeThread(H)
     -- Handle thread lifecycle transitions
     --------------------------------------------------------------------
     if not result.ok then
-        dbgLog(string.format(
-            "%s Thread[%d] failed (%s): %s\n%s",
+        local logMsg = string.format(
+            "%s Thread[%d] died a horrible death (%s): %s\n%s",
             utils:dbgPrefix(),
             H[TH_UNIQUE_ID],
             result.type,
             tostring(result.message),
             tostring(result.stack)
-        ))
-
+        )
+        dbgLog( logMsg )
         moveToMorgue(H, false)
         return false, result.message
     end
 
     -- Coroutine completed?
     if coroutine.status(co) == "dead" then
-        dbgLog(string.format("%s Thread[%d] has completed", utils:dbgPrefix(), H[TH_UNIQUE_ID]))
+        local logMsg = string.format("%s Thread[%d] has completed", utils:dbgPrefix(), H[TH_UNIQUE_ID])
+        dbgLog( logMsg )
         moveToMorgue(H, true)
         return true, nil
     end
 
     -- Normal resume
-    dbgLog(string.format("%s Thread[%d] resumed.", utils:dbgPrefix(), H[TH_UNIQUE_ID]))
+    local logMsg = string.format("%s Thread[%d] resumed.", utils:dbgPrefix(), H[TH_UNIQUE_ID])
+    dbgLog( logMsg )
     return true, unpack(result.values)
 end
 
@@ -428,7 +387,10 @@ local function scheduleThreads()
                 table.remove(threadDelayTable, i)
                 table.insert(threadControlBlock, H)
                 H[TH_REMAINING_TICKS] = H[TH_YIELD_TICKS]
-                dbgLog(string.format("%s Thread[%d] delay expired, moved to TCB.", utils:dbgPrefix(), H[TH_UNIQUE_ID]))
+                local logMsg = string.format("%s Thread[%d] delay expired, moved to TCB.", 
+                                    utils:dbgPrefix(), 
+                                    H[TH_UNIQUE_ID])
+                dbgLog(logMsg )
             end
         end
     end
@@ -448,7 +410,9 @@ local function scheduleThreads()
                 local success, errorMsging = resumeThread(H)
                 ---------------------------------------
                 if not success then
-                    dbgLog(string.format("%s Thread[%d] error: %s", utils:dbgPrefix(), H[TH_UNIQUE_ID], errorMsging ))
+                    local logMsg = string.format("%s Thread[%d] error: %s", 
+                            utils:dbgPrefix(), H[TH_UNIQUE_ID], errorMsging )
+                    dbgLog( logMsg )
 				end
             end
         end
@@ -480,7 +444,6 @@ function thread:debuggingIsEnabled()
 end
 function thread:enableDebugging()
     debuggingIsEnabled = true
-	-- utils:postMsg( string.format("%s\n", "Error logging enabled\n"))
 end
 function thread:disableDebugging()
     debuggingIsEnabled = false
@@ -495,7 +458,12 @@ function thread:disableDataCollection()
    dataCollectionIsEnabled = false
 end
 local function formatErrorMsg( prefix, errorMsg, functionName )
-    return string.format( "%s - ERROR %s: called by %s\n", prefix, errorMsg, functionName )
+    if functionName == nil then
+        errorMsg = string.format( "%s %s - called by %s\n", prefix, errorMsg)
+    else
+        errorMsg = string.format( "%s %s - called by %s\n", prefix, errorMsg, functionName )
+    end
+    return errorMsg
 end
 
 --[[@Begin 
@@ -750,7 +718,7 @@ function thread:sleep(...)
 
 	H = CURRENTLY_RUNNING_THREAD
 	if not H then
-		errorMsg = formatErrorMsg( utils:dbgPrefix(), L["THREAD+NO_THREAD_CONTEXT"], fname )
+		errorMsg = formatErrorMsg( utils:dbgPrefix(), L["NO_THREAD_CONTEXT"], fname )
 		return nil, errorMsg
 	end
 	
@@ -848,7 +816,7 @@ function thread:getSelf()
     local fname = "thread:getSelf()"
 	local H = getHandleOfCallingThread()
     if not H then
-        local errorMsg = formatErrorMsg( utils:dbgPrefix(), L["INVALID_NO_THREAD_CONTEXT"], fname )
+        local errorMsg = formatErrorMsg( utils:dbgPrefix(), L["NO_THREAD_CONTEXT"], fname )
         return nil, errorMsg
     end
     return H, nil
@@ -887,7 +855,7 @@ function thread:getId(thread_h)
     end
     isValid, errorMsg = handleIsValid(thread_h)
     if not isValid then
-        errorMsg = string.format("%s In %s, %s.\n STACK: %s\n", utils:dbgPrefix(), errorMsg, fname )
+        errorMsg = string.format("%s %s, %s.\n%s\n", utils:dbgPrefix(), L["THREAD_HANDLE_NIL"], fname )
 		return nil, errorMsg
     end
     
@@ -1068,8 +1036,7 @@ function thread:sendSignal( target_h, signal, ... )
 	end
 
 	if type( target_h) ~= "table" then
-        errorMsg = string.format("%s in %s. %s.\n", utils.dbgPrefix(), L["INVALID_TYPE"], fname)
-        errorMsg = formatErrorMsg( utils:dbgPrefix(), errorMsg, fname )
+        errorMsg = string.format("%s %s. %s.\n", utils.dbgPrefix(), L["INVALID_TYPE"], fname)
         return nil, errorMsg
     end
     

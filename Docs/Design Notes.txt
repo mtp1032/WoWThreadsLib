@@ -1,0 +1,20 @@
+Design Notes
+
+Error Design
+All errors are propagated into the client's code.
+There are no fatal errors. Threads may die (lua fault) but WoWThreadsLib will remain.
+When Errors occur in the private layer, the error msg is generated and returned to the
+client. At this level the error message specifies the file and line number where the
+error occurred. It looks like this:
+
+    "[WoWThreadsLIb:41] Parameter is nil."
+
+
+
+
+
+
+    When it arrives at the public API stack frame, the calling function is added. so
+    that it now looks like:
+
+    "[WoWThreadsLIb:41] Parameter is nil. thread:getId()"
