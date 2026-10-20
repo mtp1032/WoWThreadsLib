@@ -23,7 +23,7 @@ local L = ns.Locales
 local _, localizedVersion, expansionName = global:getLibInfo()
 local LOCALE = GetLocale()
 if LOCALE == "enUS" then
-    L["VERSION"]          = gitVersion
+    L["VERSION"]          = localizedVersion
     L["EXPANSION_NAME"]   = expansionName
     L["ADDON_LOADED_MSG"] = string.format( "%s v%s, %s.", ADDON_NAME, L["VERSION"],L["EXPANSION_NAME"] )
 	--                          Thread-specific messages

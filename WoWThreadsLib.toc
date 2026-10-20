@@ -1,4 +1,4 @@
-## Interface: 120100
+## Interface: 120100, 120105, 16001, 50504, 38000, 20506, 11508, 11509d
 ## Title: WoWThreadsLib
 ## Notes: Embedded coroutine-based threading library for World of Warcraft addons.
 ## Author: Michael T. Peterson
