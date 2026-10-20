@@ -3,12 +3,8 @@
 ## Notes: Embedded coroutine-based threading library for World of Warcraft addons.
 ## Author: Michael T. Peterson
 ## X-Category: Development Tools
-## X-MAJOR: 0
-## X-MINOR: 1
-## X-PATCH: 0
 ## X-Website: https://github.com/mtp1032/WoWThreadsLib
-## X-Source-Project: WoWThreads (standalone addon)
-## X-Source-URL: https://github.com/mtp1032/WoWThreads
+## X-Source-URL: https://github.com/mtp1032/WoWThreadsLib
 
 Libs\LibStub\LibStub.lua
 
