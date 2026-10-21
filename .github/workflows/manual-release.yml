@@ -22,14 +22,17 @@ jobs:
         run: |
           set -euo pipefail
 
-          # Extract the localizedVersion string: "0.1.2"
-          VER=$(grep -Eo 'localizedVersion[[:space:]]*=[[:space:]]*"([0-9]+\.[0-9]+\.[0-9]+)"' Libs/Globals.lua \
-                | grep -Eo '[0-9]+\.[0-9]+\.[0-9]+')
+          # Extract MAJOR, MINOR, PATCH from Globals.lua
+          MAJOR=$(grep -Eo 'local MAJOR[[:space:]]*=[[:space:]]*[0-9]+' Libs/Globals.lua | grep -Eo '[0-9]+')
+          MINOR=$(grep -Eo 'local MINOR[[:space:]]*=[[:space:]]*[0-9]+' Libs/Globals.lua | grep -Eo '[0-9]+')
+          PATCH=$(grep -Eo 'local PATCH[[:space:]]*=[[:space:]]*[0-9]+' Libs/Globals.lua | grep -Eo '[0-9]+')
 
-          if [[ -z "$VER" ]]; then
-            echo "ERROR: Could not extract version from Libs/Globals.lua" >&2
+          if [[ -z "$MAJOR" || -z "$MINOR" || -z "$PATCH" ]]; then
+            echo "ERROR: Could not extract MAJOR/MINOR/PATCH from Libs/Globals.lua" >&2
             exit 1
           fi
+
+          VER="${MAJOR}.${MINOR}.${PATCH}"
 
           echo "ver=$VER" >> "$GITHUB_OUTPUT"
           echo "tag=v$VER" >> "$GITHUB_OUTPUT"
