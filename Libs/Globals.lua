@@ -7,10 +7,9 @@ local ADDON_NAME, ns = ...
 
 ns.Globals = ns.Globals or {}
 local global = ns.Globals
-local gitVersion = "0.1.1"
 local MAJOR = 0
 local MINOR = 1
-local PATCH = 1
+local PATCH = 2
 local gitVersion = MAJOR * 10000 + MINOR * 100 + PATCH
 local localizedVersion = string.format("%d.%d.%d", MAJOR, MINOR, PATCH)  
 -----------------------------------------------------------------
@@ -41,7 +40,7 @@ addExpansionName(LE_EXPANSION_MIDNIGHT, "Midnight")
 -----------------------------------------------------------------
 -- Private functions
 -----------------------------------------------------------------
-
+-- returns: numericVersion, localizedVersion, expansionName
 local function getExpansionName()
     local expansionName = "Wow: Forever - Beta"
     
@@ -49,8 +48,8 @@ local function getExpansionName()
     if expansionLevel == 0 then
         return expansionName
     end
-    return EXPANSION_NAMES[expansionLevel]
-        or select(4, GetBuildInfo())
+    local fallbackName = select(4, GetBuildInfo())
+    return EXPANSION_NAMES[expansionLevel] or fallbackName
 end
 
 -- returns: gitversion, addonName = global:getAddonInfo()
