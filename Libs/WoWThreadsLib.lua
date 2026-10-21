@@ -30,7 +30,7 @@ local morgue                = {}
 
 local CLOCK_TICK_INTERVAL    = 1/GetFramerate() -- approx 16.7 ms on a 60Hz system
 local WoWThreadsStarted      = false
-local debuggingIsEnabled     = true
+local debuggingIsEnabled     = false
 local dataCollectionIsEnabled = true
 -- =====================================================================
 --                      NUMERIC CONSTANTS
@@ -222,7 +222,7 @@ local function moveToMorgue( H, normalCompletion )
                 dbgLog( logMsg )
             else
                 H[TH_COROUTINE] = nil
-                logMsg = string.format("*** ABNORMAL termination *** %s Thread[%d] died horribly.\n",utils:dbgPrefix(), H[TH_UNIQUE_ID])
+                logMsg = string.format("*** ABNORMAL termination *** %s Thread[%d] died a horrible death.\n",utils:dbgPrefix(), H[TH_UNIQUE_ID])
                 dbgLog( logMsg )
             end
         end
@@ -459,9 +459,9 @@ function thread:disableDataCollection()
 end
 local function formatErrorMsg( prefix, errorMsg, functionName )
     if functionName == nil then
-        errorMsg = string.format( "%s %s - called by %s\n", prefix, errorMsg)
+        errorMsg = string.format( "%s %s.\n", prefix, errorMsg)
     else
-        errorMsg = string.format( "%s %s - called by %s\n", prefix, errorMsg, functionName )
+        errorMsg = string.format( "%s %s | Caller: %s\n", prefix, errorMsg, functionName )
     end
     return errorMsg
 end
@@ -855,7 +855,7 @@ function thread:getId(thread_h)
     end
     isValid, errorMsg = handleIsValid(thread_h)
     if not isValid then
-        errorMsg = string.format("%s %s, %s.\n%s\n", utils:dbgPrefix(), L["THREAD_HANDLE_NIL"], fname )
+        errorMsg = string.format("%s %s, %s.\n", utils:dbgPrefix(), L["THREAD_HANDLE_NIL"], fname )
 		return nil, errorMsg
     end
     
