@@ -1,0 +1,94 @@
+name: Manual Release (WoWThreadsLib)
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build-and-release:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Extract version from Globals.lua
+        id: libVersion
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          # Extract the localizedVersion string: "0.1.2"
+          VER=$(grep -Eo 'localizedVersion[[:space:]]*=[[:space:]]*"([0-9]+\.[0-9]+\.[0-9]+)"' Libs/Globals.lua \
+                | grep -Eo '[0-9]+\.[0-9]+\.[0-9]+')
+
+          if [[ -z "$VER" ]]; then
+            echo "ERROR: Could not extract version from Libs/Globals.lua" >&2
+            exit 1
+          fi
+
+          echo "ver=$VER" >> "$GITHUB_OUTPUT"
+          echo "tag=v$VER" >> "$GITHUB_OUTPUT"
+          echo "zip=WoWThreadsLib-$VER.zip" >> "$GITHUB_OUTPUT"
+          echo "Detected version: $VER"
+
+      - name: Stage library files
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          rm -rf dist && mkdir -p dist/WoWThreadsLib
+
+          # Copy library files
+          cp -r Libs dist/WoWThreadsLib/
+
+          # Copy main library entry file
+          cp WoWThreadsLib.lua dist/WoWThreadsLib/
+
+          # Optional: include test harness files
+          [ -f WoWThreadsTestScaffold.lua ] && cp WoWThreadsTestScaffold.lua dist/WoWThreadsLib/
+          [ -f WoWThreadsTestHarness.lua ] && cp WoWThreadsTestHarness.lua dist/WoWThreadsLib/
+          [ -f testThreadCreation.lua ] && cp testThreadCreation.lua dist/WoWThreadsLib/
+
+          # Optional: include README and LICENSE
+          [ -f README.md ] && cp README.md dist/WoWThreadsLib/
+          [ -f LICENSE ] && cp LICENSE dist/WoWThreadsLib/
+
+          echo "Staged contents:"
+          ls -la dist/WoWThreadsLib
+
+      - name: Create zip archive
+        shell: bash
+        run: |
+          cd dist
+          zip -r "${{ steps.libVersion.outputs.zip }}" WoWThreadsLib
+          mv "${{ steps.libVersion.outputs.zip }}" ..
+          cd ..
+          echo "Created ${{ steps.libVersion.outputs.zip }}"
+
+      - name: Create tag
+        shell: bash
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          if git rev-parse "${{ steps.libVersion.outputs.tag }}" >/dev/null 2>&1; then
+            echo "Tag ${{ steps.libVersion.outputs.tag }} already exists. Aborting."
+            exit 1
+          fi
+
+          git tag -a "${{ steps.libVersion.outputs.tag }}" -m "Release ${{ steps.libVersion.outputs.tag }}"
+          git push origin "${{ steps.libVersion.outputs.tag }}"
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name:  ${{ steps.libVersion.outputs.tag }}
+          name:      WoWThreadsLib ${{ steps.libVersion.outputs.tag }}
+          draft:     false
+          prerelease: false
+          files:     ${{ steps.libVersion.outputs.zip }}
