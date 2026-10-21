@@ -50,7 +50,7 @@ jobs:
           cp -r Libs dist/WoWThreadsLib/
 
           # Copy main library entry file
-          cp WoWThreadsLib.lua dist/WoWThreadsLib/Libs
+          cp Libs/WoWThreadsLib.lua dist/WoWThreadsLib/
 
           # Optional: include test harness files
           [ -f WoWThreadsTestScaffold.lua ] && cp WoWThreadsTestScaffold.lua dist/WoWThreadsLib/
