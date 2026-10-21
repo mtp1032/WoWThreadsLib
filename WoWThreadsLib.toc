@@ -16,4 +16,9 @@ Libs\UtilsLib.lua
 Libs\SignalQueue.lua
 Libs\WoWThreadsLib.lua
 
+# 3. Test framework (scaffold first, harness second)
+WoWThreadsTestScaffold.lua
+WoWThreadsTestHarness.lua
+
+# 4. Test modules (register themselves)
 testThreadCreation.lua
