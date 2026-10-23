@@ -35,42 +35,41 @@ local function printTable(t, indent)
         end
     end
 end
--- Function to get all global variables for a specified addon
-function utils:printGlobalVars( addonName )SLASH_PRINTGLOBALS1 = "/printglobals"
-    SlashCmdList["PRINTGLOBALS"] = function(msg)
+-- Function to get all core variables for a specified addon
+function utils:printGlobalVars( addonName )
+    SlashCmdList["SLASH_PRINT_CORE1"] = function(msg)
         local addonName = msg:match("^(%S+)$")
         if addonName then
             _G.printGlobalVars(addonName)
         else
-            print("Usage: /printglobals <AddonName>")
+            print("Usage: /printGlobal <AddonName>")
         end
     end
-    local globals = {}
+    local GlobalVars = {}
     
     for k, v in pairs(_G) do
         -- Check if the variable name starts with the addon name
         if type(k) == "string" and k:find("^" .. addonName) then
-            globals[k] = v
+            GlobalVars[k] = v
         end
     end
     
-    printTable( globals )
+    printTable( GlobalVars )
 end
 
--- Register the table globally for other addon files to use
--- Add the printGlobalVars function to the global namespace
+-- Register the table Globally for other addon files to use
+-- Add the printGlobalVars function to the core namespace
 _G.printGlobalVars = function(addonName)
     utils:printGlobalVars(addonName)
 end 
     
--- Example Usage:
-SLASH_PRINTGLOBALS1 = "/printglobals"
-SlashCmdList["PRINTGLOBALS"] = function(msg)
+-- Example Usag SLASH_PRINT_GLOBAL1 = "/printGlobals"
+SlashCmdList["SLASH_PRINT_CORE1"] = function(msg)
     local addonName = msg:match("^(%S+)$")
     if addonName then
         _G.printGlobalVars(addonName)
     else
-        print("Usage: /printglobals <AddonName>")
+        print("Usage: printGlobals <AddonName>")
     end
 end
 
@@ -305,6 +304,6 @@ function utils:dbgPrint(...)
     prefix = string.format("|cffff9900%s|r", prefix)
     local output = prefix .. table.concat(args, " ")
 
-    -- Directly call the global print function
+    -- Directly call the core print function
     DEFAULT_CHAT_FRAME:AddMessage(output)
 end
