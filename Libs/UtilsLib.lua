@@ -9,6 +9,7 @@ ns.UtilsLib = ns.UtilsLib or {}
 local utils = ns.UtilsLib
 local L = ns.Locales
 
+
 -- =================================================
 --              PROLOGUE
 -- =================================================
@@ -18,60 +19,6 @@ local resultNotificationFrame = nil
 
 utils.EMPTY_STR = ""
 local EMPTY_STR = utils.EMPTY_STR
-
--- This is a function that will print all of the visible symbols from an addon's symbol table.
-
--- Helper function to recursively print the contents of a table
-local function printTable(t, indent)
-    indent = indent or "   "
-    for k, v in pairs(t) do
-        if type(v) == "table" then
-            local str = indent .. k .. ":"
-            utils:postMsg(string.format("%s\n", str ))
-            printTable(v, indent .. "  ")
-        else
-            local str = indent .. k .. ": " .. tostring(v)
-            utils:postMsg( string.format("%s\n", str ))
-        end
-    end
-end
--- Function to get all core variables for a specified addon
-function utils:printGlobalVars( addonName )
-    SlashCmdList["SLASH_PRINT_CORE1"] = function(msg)
-        local addonName = msg:match("^(%S+)$")
-        if addonName then
-            _G.printGlobalVars(addonName)
-        else
-            print("Usage: /printGlobal <AddonName>")
-        end
-    end
-    local GlobalVars = {}
-    
-    for k, v in pairs(_G) do
-        -- Check if the variable name starts with the addon name
-        if type(k) == "string" and k:find("^" .. addonName) then
-            GlobalVars[k] = v
-        end
-    end
-    
-    printTable( GlobalVars )
-end
-
--- Register the table Globally for other addon files to use
--- Add the printGlobalVars function to the core namespace
-_G.printGlobalVars = function(addonName)
-    utils:printGlobalVars(addonName)
-end 
-    
--- Example Usag SLASH_PRINT_GLOBAL1 = "/printGlobals"
-SlashCmdList["SLASH_PRINT_CORE1"] = function(msg)
-    local addonName = msg:match("^(%S+)$")
-    if addonName then
-        _G.printGlobalVars(addonName)
-    else
-        print("Usage: printGlobals <AddonName>")
-    end
-end
 
 --======================================================================
 --                          POST MESSAGE METHODS
