@@ -7,7 +7,7 @@ local ADDON_NAME, ns = ...
 
 ns.Locales = ns.Locales or {}
 ns.Core = ns.Core or {}
-local global = ns.Core
+local core = ns.Core
 
 -- =====================================================================
 --                      LOCALIZATION
