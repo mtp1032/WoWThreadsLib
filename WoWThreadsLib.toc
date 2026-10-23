@@ -15,6 +15,7 @@ Libs\PostMessages.lua
 Libs\UtilsLib.lua
 Libs\SignalQueue.lua
 Libs\WoWThreadsLib.lua 
+Libs\GlobalAuditor.lua
 
 # 3. Test framework (scaffold first, harness second)
 WoWThreadsTestScaffold.lua
