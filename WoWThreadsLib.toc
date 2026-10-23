@@ -9,16 +9,21 @@
 Libs\LibStub\LibStub.lua
 
 # The library's Lua files
-Libs\Globals.lua
+Libs\Core.lua
 Libs\Locales.lua
 Libs\PostMessages.lua
 Libs\UtilsLib.lua
 Libs\SignalQueue.lua
-Libs\WoWThreadsLib.lua
+Libs\WoWThreadsLib.lua 
 
 # 3. Test framework (scaffold first, harness second)
 WoWThreadsTestScaffold.lua
 WoWThreadsTestHarness.lua
 
 # 4. Test modules (register themselves)
-testThreadCreation.lua
+TestThreadCreationParams.lua
+##TestThreadSignalParams.lua
+
+# 5. Required in invoke tests from the command line.
+Tests.lua
+Commands.lua
