@@ -9,7 +9,7 @@ ns.Scaffold = ns.Scaffold or {}
 
 local Scaffold  = ns.Scaffold
 local test      = ns.TestThreadCreation
-local global    = ns.Core
+local core    = ns.Core
 local post      = ns.PostMessages
 local utils     = ns.UtilsLib
 
