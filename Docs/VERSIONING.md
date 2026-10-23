@@ -1,154 +1,73 @@
-\# WoWThreadsLib Versioning Protocol
+# WoWThreadsLib Versioning Protocol
 
+WoWThreadsLib uses a clear, predictable semantic versioning model designed for embedded World of Warcraft libraries. The versioning rules mirror the standalone WoWThreads addon where appropriate, but WoWThreadsLib maintains its own independent version stream and
 
+## LibStub identity.
+Both libraries share the same public API, but their internal implementations, packaging, and release cycles differ. This document defines how version numbers are assigned and how compatibility is maintained.
 
-WoWThreadsLib uses a clear, predictable semantic versioning model designed for embedded
+---
+## Semantic Versioning
+WoWThreadsLib uses the following version format in which each component has a specific meaning:
+### *PATCH (x.y.Z)*  
+Internal changes only. No API or behavioral changes. PATCH increments include:
 
-World of Warcraft libraries. The versioning rules mirror the standalone WoWThreads addon
+- Internal refactoring  
 
-where appropriate, but WoWThreadsLib maintains its own independent version stream and
-
-LibStub identity.
-
-
-
-Both libraries share the same public API, but their internal implementations, packaging,
-
-and release cycles differ. This document defines how version numbers are assigned and how
-
-compatibility is maintained.
-
-
-
-\---
-
-
-
-\## Semantic Versioning
-
-
-
-WoWThreadsLib uses the following version format:
-
-
-
-
-
-Each component has a specific meaning:
-
-
-
-\### \*\*PATCH (x.y.Z)\*\*  
-
-Internal changes only. No API or behavioral changes.
-
-
-
-PATCH increments include:
-
-\- Internal refactoring  
-
-\- Performance improvements  
-
-\- Bug fixes  
-
-\- Logging changes  
-
-\- Documentation updates  
-
-\- Code cleanup  
-
-\- Reorganization  
-
-\- Pure refactoring (even large-scale)
-
-
+- Performance improvements  
+- Bug fixes  
+- Logging changes  
+- Documentation updates  
+- Code cleanup  
+- Reorganization  
+- Pure refactoring (even large-scale)
 
 PATCH changes:
 
-\- Do \*\*not\*\* require addon authors to update their embedded copy  
-
-\- Do \*\*not\*\* affect API compatibility  
-
-\- Do \*\*not\*\* change thread semantics  
-
-\- Do \*\*not\*\* introduce new features  
-
-
+- Do *not* require addon authors to update their embedded copy  
+- Do *not* affect API compatibility  
+- Do *not* change thread semantics  
+- Do *not* introduce new features  
 
 PATCH releases are always safe and backward-compatible.
 
-
-
-\---
-
-
-
-\### \*\*MINOR (x.Y.z)\*\*  
-
-Backward-compatible behavioral or feature changes.
+---
 
 
 
-MINOR increments include:
+### *MINOR (x.Y.z)*  
 
-\- New optional features  
+Backward-compatible behavioral or feature changes, As such MINOR increments include:
 
-\- New public functions  
+- New optional features  
+- New public functions  
+- New scheduler modes  
+- New thread utilities  
+- Meaningful behavior changes that do not break existing addons  
+- Additions to the API that preserve backward compatibility  
 
-\- New scheduler modes  
+*MINOR changes*
 
-\- New thread utilities  
-
-\- Meaningful behavior changes that do not break existing addons  
-
-\- Additions to the API that preserve backward compatibility  
-
-
-
-MINOR changes:
-
-\- Should prompt addon authors to update their embedded copy  
-
-\- May change behavior in ways that matter to consumers  
-
-\- Must not break existing addons  
-
-\- Must not remove or alter existing API signatures  
-
-
+- Should prompt addon authors to update their embedded copy  
+- May change behavior in ways that matter to consumers  
+- Must not break existing addons  
+- Must not remove or alter existing API signatures  
 
 MINOR releases remain backward-compatible but introduce new capabilities.
 
+---
 
-
-\---
-
-
-
-\### \*\*MAJOR (X.y.z)\*\*  
+### MAJOR (X.y.z)
 
 Breaking changes or new architectural functionality.
-
-
-
 MAJOR increments include:
+- Removed API functions  
+- Changed function signatures  
+- Changed scheduler semantics  
+- Changed coroutine behavior  
+- New architectural subsystems  
+- Any change that breaks a pre-existing addon version  
 
-\- Removed API functions  
-
-\- Changed function signatures  
-
-\- Changed scheduler semantics  
-
-\- Changed coroutine behavior  
-
-\- New architectural subsystems  
-
-\- Any change that breaks existing addons  
-
-
-
-MAJOR changes:
+****MAJOR changes:***
 
 \- Require addon authors to update their code  
 

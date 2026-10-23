@@ -26,7 +26,7 @@ projects share the same public API and threading semantics.
 ### Notes
 - WoWThreadsLib uses a **different LibStub name** than the standalone addon, preventing version negotiation or override.
 - The public API is identical to the standalone WoWThreads addon, ensuring full compatibility for addon developers.
-- Internal implementation differs significantly from the standalone version (no UI, no minimap, no help panel, no documentation UI, no addon-level state).
+- Internal implementation differs significantly from the standalone version (no UI, no minimap, no help panel, no documentation UI, no addon-level state). However, the public interface (The WoWThreads API) remains unchanged. 
 
 ---
 
