@@ -562,7 +562,7 @@ The shared version is packaged as a standalone addon named **WoWThreads**. It is
 2. Place it in the game’s `Interface/AddOns` directory.  
 3. Ensure the addon is enabled in the WoW AddOns menu.  
 
-When loaded, WoWThreads registers itself globally and exposes the `thread:` namespace to all addons. Any addon may call WoWThreads API functions without embedding the library. This model is appropriate when:
+When loaded, WoWThreads registers itself Corely and exposes the `thread:` namespace to all addons. Any addon may call WoWThreads API functions without embedding the library. This model is appropriate when:
 
 - multiple addons on the system use WoWThreads,  
 - the developer prefers a single shared copy of the library,  
