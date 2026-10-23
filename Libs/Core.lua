@@ -7,6 +7,7 @@ local ADDON_NAME, ns = ...
 
 ns.Core = ns.Core or {}
 local core = ns.Core
+
 local MAJOR = 0
 local MINOR = 1
 local PATCH = 2
