@@ -145,8 +145,8 @@ local function createMsgFrame(title)
 	
     createTextDisplay(f)
     createResizeButton(f)
-    createSelectButton(f, "BOTTOMRIGHT",f, 5, 5)
-    createReloadButton(f, "BOTTOMLEFT", f, 5, 5)
+    createSelectButton(f,"BOTTOMRIGHT",f, 5, 5)
+    createReloadButton(f,"BOTTOMLEFT", f, 5, 5)
     return f
 end
 
