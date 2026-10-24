@@ -49,44 +49,48 @@ local TH_TIME_CREATED       = 12 -- timestamped from debugprofilestop()
 local TH_TIME_COMPLETED     = 13 -- timestamped from debugprofilestop()
 local TH_NUM_HANDLE_ELEMENTS = TH_TIME_COMPLETED
 
--- Each thread has a signal queue. Each element in the signal queue
--- consists of 3 elements: the signal, the sending thread, and data. 
--- Example: sigTable = {signalValue, sender_h, ... }
---
--- These constants are the signal values found in sigTable[1]
-thread.SIG_READY            = 1 -- info: thread is ready to receive something
-thread.SIG_CALLBACK         = 2  -- info: Signal entry contains a callback function in Sig[3]
-thread.SIG_ALERT            = 3 -- schedule for immediate execution
-thread.SIG_CONDITION_MET    = 4 -- resumes a thread waiting for a condition of occur
-thread.SIG_COMPLETE         = 5
-thread.SIG_TERMINATE        = 6 -- thread terminates itself upon receipt.
-thread.SIG_NONE_PENDING     = 7 -- signal queue is empty.
+-- Each thread has a signal queue. Each element in the signal queue contain
+-- a sigEntry, tuple consisting of 3 elements: the signal, the sending thread, 
+-- optional data (often termed the signal's payload). 
+-- Example: sigTable = {signalValue, sender_h, [,...] }, where ... contains an
+-- untyped and optional payload.
+-- 
+thread.SIG_READY            = 1 -- signal target_h the sender_h is ready.
+thread.SIG_START            = 2 -- signal target_h that it is to start.
+thread.SIG_COMPLETE         = 3 -- signal target_h that the sender_h is done
+thread.SIG_ALERT            = 4 -- schedule target_h for immediate execution
+thread.SIG_CONDITION_MET    = 5 -- resumes target_h waiting for a condition of occur
+thread.SIG_CREATE_THREAD    = 6 -- signal the target_h to create a thread from its payload.
+thread.SIG_TERMINATE        = 7 -- target_h is to terminate itself upon receipt.
+thread.SIG_NONE_PENDING     = 8 -- signal queue is empty.
 
 thread.signalTable = {
     SIG_READY           = thread.SIG_READY,
-    SIG_CALLBACK        = thread.SIG_CALLBACK,
+    SIG_START           = thread.SIG_START,
+    SIG_COMPLETE        = thread.SIG_COMPLETE,
     SIG_ALERT           = thread.SIG_ALERT,
     SIG_CONDITION_MET   = thread.SIG_CONDITION_MET,
-    SIG_COMPLETE        = thread.SIG_COMPLETE,
+    SIG_CREATE_THREAD   = thread.SIG_TERMINATE,
     SIG_TERMINATE       = thread.SIG_TERMINATE,
     SIG_NONE_PENDING    = thread.SIG_NONE_PENDING,
 }
-
 local SIG_READY             = thread.SIG_READY
-local SIG_CALLBACK          = thread.SIG_CALLBACK
+local SIG_START             = thread.SIG_START
+local SIG_COMPLETE          = thread.SIG_COMPLETE
 local SIG_ALERT             = thread.SIG_ALERT
 local SIG_CONDITION_MET     = thread.SIG_CONDITION_MET
-local SIG_COMPLETE          = thread.SIG_COMPLETE
+local SIG_CREATE_THREAD     = thread.SIG_CREATE_THREAD
 local SIG_TERMINATE         = thread.SIG_TERMINATE
 local SIG_NONE_PENDING      = thread.SIG_NONE_PENDING
 
 thread.signalNameTable = {
     "SIG_READY",
-    "SIG_CALLBACK",
+    "SIG_START",
+    "SIG_COMPLETE",
     "SIG_ALERT",
     "SIG_CONDITION_MET",
+    "SIG_CREATE_THREAD",
     "SIG_TERMINATE",
-    "SIG_COMPLETE",
     "SIG_NONE_PENDING"
 }
 local signalNameTable = thread.signalNameTable
