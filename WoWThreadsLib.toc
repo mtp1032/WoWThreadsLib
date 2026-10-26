@@ -17,14 +17,6 @@ Libs\SignalQueue.lua
 Libs\WoWThreadsLib.lua 
 Libs\GlobalAuditor.lua
 
-# 3. Test framework (scaffold first, harness second)
-WoWThreadsTestScaffold.lua
-WoWThreadsTestHarness.lua
-
-# 4. Test modules (register themselves)
-TestThreadCreationParams.lua
-##TestThreadSignalParams.lua
-
-# 5. Required in invoke tests from the command line.
-Tests.lua
-Commands.lua
+ReportResults.lua
+CollectResults.lua
+TestCreate.lua
