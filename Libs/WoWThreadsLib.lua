@@ -30,7 +30,7 @@ local morgue                = {}
 local CLOCK_TICK_INTERVAL    = 1/GetFramerate() -- approx 16.7 ms on a 60Hz system
 local WoWThreadsStarted      = false
 local debuggingIsEnabled     = true
-local dataCollectionIsEnabled = true
+local dataCollectionIsEnabled = false
 -- =====================================================================
 --                      NUMERIC CONSTANTS
 -- =====================================================================
@@ -97,9 +97,15 @@ local signalNameTable = thread.signalNameTable
 
 --                          LOCAL FUNCTIONS 
 local function dbgLog( prefix, msg )
+    if prefix == nil then
+        error( "prefix was nil")
+    end
+    if msg == nil then
+        error( "logMsg was nil" )
+    end
+
     if debuggingIsEnabled then
          local logMsg = string.format("[LOG]  %s %s\n", prefix, msg )
-         print( utils:dbgPrefix(), logMsg )
         post:message( logMsg )
     end
 end
@@ -197,8 +203,8 @@ local function moveToMorgue( H, normalCompletion )
             else
                 H[TH_COROUTINE] = nil
                 utils:dbgPrefix()
-                logMsg = string.format("*** ABNORMAL termination *** %s Thread[%d] died a horrible death.\n", H[TH_UNIQUE_ID])
-                dbgLog( prefix, logMsg )
+                logMsg = string.format("*** ABNORMAL termination *** Thread[%d] died a horrible death.\n", H[TH_UNIQUE_ID])
+                dbgLog( utils:dbgPrefix(), logMsg )
             end
         end
         -- don't need this anymore.
@@ -302,11 +308,11 @@ local function resumeThread(H)
 
     if not ok then
         -- xpcall caught a Lua error inside coroutine.resume
-        local errObj = raw[2]  -- this is the table returned by errorHandler
-        result.ok      = false
-        result.type    = "xpcall_error"
-        result.message = errObj.message
-        result.stack   = errObj.stack
+        local errObj    = raw[2]  -- this is the table returned by errorHandler
+        result.ok       = false
+        result.type     = "xpcall_error"
+        result.message  = errObj.message
+        result.stack    = errObj.stack
 
     elseif not resumeOK then
         -- coroutine.resume returned false → coroutine error
@@ -326,12 +332,12 @@ local function resumeThread(H)
     --------------------------------------------------------------------
     if not result.ok then
         local logMsg = string.format(
-            "Thread[%d] died a horrible death (%s): %s\n%s",
+            "Thread[%d] died a horrible death %s - %s\n",
             H[TH_UNIQUE_ID],
             result.type,
-            tostring(result.message),
-            tostring(result.stack)
-        )
+            tostring(result.message))
+            -- tostring(result.stack)
+        
         dbgLog( utils:dbgPrefix(), logMsg )
         moveToMorgue(H, false)
         return false, result.message
@@ -363,7 +369,7 @@ local function scheduleThreads()
                 local success, errorMsg = resumeThread(H)
                 ---------------------------------------
                 if not success then
-                    local logMsg = string.format("Thread[%d] error: %s", utils:dbgPrefix(), H[TH_UNIQUE_ID], errorMsg )
+                    local logMsg = string.format("Thread[%d] error: %s", H[TH_UNIQUE_ID], errorMsg )
                     dbgLog( utils:dbgPrefix(), logMsg )
 				end
             end
@@ -371,55 +377,24 @@ local function scheduleThreads()
     end
 end
 
-local function startTimer( tickInterval )
-    scheduleThreads()
-        C_Timer.After(
-            tickInterval,
-            function()
-                startTimer(tickInterval)
-            end
-        )
+local function startTimer(CLOCK_TICK_INTERVAL)
+    scheduleThreads(CLOCK_TICK_INTERVAL)
+    C_Timer.After( CLOCK_TICK_INTERVAL,
+        function()
+            startTimer(CLOCK_TICK_INTERVAL)
+        end
+    )
+    WoWThreadsStarted = true
 end
 
 --================================================================
 --==================== PUBLIC (EXPORTED) SERVICES ================
 --================================================================
-local running = false
-function thread:libInit()
-    if running == false then
-        startTimer(CLOCK_TICK_INTERVAL)
-        running = true
-    end
-    return running
-end
-
-function thread:mgmtThreadsInitialize()
-    return WoWThreadsStarted
-end
-
-function thread:debuggingIsEnabled()
-    return debuggingIsEnabled
-end
-function thread:enableDebugging()
-    debuggingIsEnabled = true
-end
-function thread:disableDebugging()
-    debuggingIsEnabled = false
-end
-function thread:dataCollectionIsEnabled()
-    return dataCollectionIsEnabled
-end
-function thread:enableDataCollection()
-    dataCollectionIsEnabled = true
-end
-function thread:disableDataCollection()
-   dataCollectionIsEnabled = false
-end
 local function formatErrorMsg( prefix,  errorMsg, functionName )
     if functionName == nil then
         errorMsg = string.format( "%s %s.\n", prefix,  errorMsg)
     else
-        errorMsg = string.format( "%s %s | Caller: %s\n", utils:dbgPrefix(),  errorMsg, functionName )
+        errorMsg = string.format( "%s %s Caller: %s\n", prefix,  errorMsg, functionName )
     end
     return errorMsg
 end
@@ -506,9 +481,6 @@ function thread:create( yieldTicks, someFunction,... )
     local H = createHandle( addonName, parent_h, yieldTicks, someFunction, ... )
 
     table.insert( threadControlBlock, H )
-    if H[TH_UNIQUE_ID] == 5 then
-        post:message( tostring( debugstack(2)))
-    end
     local logMsg = string.format("Thread[%d] (ticks %d) inserted into TCB.", H[TH_UNIQUE_ID], H[TH_YIELD_TICKS])
     dbgLog( utils:dbgPrefix(),  logMsg )
     return H, nil
@@ -604,55 +576,6 @@ function thread:hasCompleted( thread_h )
 end
 
 --[[@Begin
-local metrics = { threadId, lifeTimeMS, lifetimeTicks, yieldReumptions}
-Signature: metrics, errorMsg  = thread:getMetrics( thread_h )
-Description: Gets some some basic execution metrics; the runtime (ms) and   
-congestion (how long the thread had to wait to begin execution after having
-been resumed). Note: at this point, only completed threads can be queried.
-Parameters:
-- thread_h (thread_handle): the thread handle whose metrics are to be returned.
-Returns:
-- metrics (table): containing the following elements
-- metrics.threadId: The thread's unique identifier
-- metrics.lifeTimeMS: total time thread was running in milliseconds.
-- metrics.lifeTimeTicks: total time thread was running in clock ticks.
-- metrics.yieldTicks: The thread's yield interval is ticks (1/framerate)
-- metrics.resumptions: number of times the thread resumed from a yield.
-- errorMsg - nil if successful otherwise r[1] is an error message, r[2] is the function, r[3] is a stack trace.
-Usage:
-    local metrics,errorMsg = thread:getMetrics( thread_h )
-@End]]
-function thread:getMetrics( thread_h )
-    local fname = "thread:getMetrics()"
-    local errorMsg = nil
-
-    if thread_h == nil then
-        errorMsg = formatErrorMsg( utils:dbgPrefix(), L["THREAD_HANDLE_NIL"], fname )
-        return nil, errorMsg
-    end
-
-    local isValid = handleIsValid(thread_h)
-    if not isValid then
-        errorMsg = formatErrorMsg( utils:dbgPrefix(), L["THREAD_HANDLE_INVALID"], fname )
-        return nil, errorMsg
-    end
-
-    if not handleIsInMorgue( thread_h ) then
-        errorMsg = formatErrorMsg( utils:dbgPrefix(), L["THREAD_NOT_COMPLETED"], fname )
-        return nil, errorMsg
-    end
-
-	local metricsTable = {}
-	metricsTable.threadId 		= thread_h[TH_UNIQUE_ID]
-	metricsTable.Lifetime 		= thread_h[TH_TIME_COMPLETED] - thread_h[TH_TIME_CREATED]
-	metricsTable.elapsedTicks	= thread_h[TH_ELAPSED_TICKS]
-	metricsTable.yieldTicks 	= thread_h[TH_YIELD_TICKS]
-	metricsTable.resumptions 	= thread_h[TH_RESUMPTIONS]
-
-	return metricsTable 
-end
-
---[[@Begin
 Signature: local ticksDelayed, errorMsg = thread:delay( ticks )
 Description: Suspends the calling thread for the specified number of ticks. 
 Note: when signaled, delayed threads respond as normal. Note: thread:delay()
@@ -687,6 +610,14 @@ function thread:delay(delayTicks)
     H[TH_REMAINING_TICKS] = delayTicks
     coroutine.yield()
     return true, nil
+end
+function thread:sleep()
+end
+function thread:wakeup( thread_h )
+end
+function thread:halt( thread_h )
+end
+function thread:kill( thread_h )
 end
 
 --[[@Begin
@@ -1098,6 +1029,24 @@ function thread:getSignalName(signal)
 	return signalName, errorMsg
 end
 
+function thread:mgmtDebuggingIsEnabled()
+    return debuggingIsEnabled
+end
+function thread:mgmtEnableDebugging()
+    debuggingIsEnabled = true
+end
+function thread:mgmtDisableDebugging()
+    debuggingIsEnabled = false
+end
+function thread:mgmtDataCollectionIsEnabled()
+    return dataCollectionIsEnabled
+end
+function thread:mgmtEnableDataCollection()
+    dataCollectionIsEnabled = true
+end
+function thread:mgmtDisableDataCollectionn()
+   dataCollectionIsEnabled = false
+end
 --[[@Begin
 Signature: signalCount, errorMsg = thread:getNumPendingSignals()
 Description: Gets the number of pending signals for the calling thread.
@@ -1115,8 +1064,74 @@ Usage:
     if signalCount == nil then 
         print( errorMsg[1], errorMsg[2]) return end
 @End]]
-function thread:getNumPendingSignals()
+function thread:mgmtGetNumPendingSignals()
     local H = getHandleOfCallingThread()
     return H[TH_SIGNAL_QUEUE]:size(), nil
+end
+--[[@Begin
+local metrics = { threadId, lifeTimeMS, lifetimeTicks, yieldReumptions}
+Signature: metrics, errorMsg  = thread:getMetrics( thread_h )
+Description: Gets some some basic execution metrics; the runtime (ms) and   
+congestion (how long the thread had to wait to begin execution after having
+been resumed). Note: at this point, only completed threads can be queried.
+Parameters:
+- thread_h (thread_handle): the thread handle whose metrics are to be returned.
+Returns:
+- metrics (table): containing the following elements
+- metrics.threadId: The thread's unique identifier
+- metrics.lifeTimeMS: total time thread was running in milliseconds.
+- metrics.lifeTimeTicks: total time thread was running in clock ticks.
+- metrics.yieldTicks: The thread's yield interval is ticks (1/framerate)
+- metrics.resumptions: number of times the thread resumed from a yield.
+- errorMsg - nil if successful otherwise r[1] is an error message, r[2] is the function, r[3] is a stack trace.
+Usage:
+    local metrics,errorMsg = thread:getMetrics( thread_h )
+@End]]
+function thread:getMetrics( thread_h )
+    local fname = "thread:getMetrics()"
+    local errorMsg = nil
+
+    if thread_h == nil then
+        errorMsg = formatErrorMsg( utils:dbgPrefix(), L["THREAD_HANDLE_NIL"], fname )
+        return nil, errorMsg
+    end
+
+    local isValid = handleIsValid(thread_h)
+    if not isValid then
+        errorMsg = formatErrorMsg( utils:dbgPrefix(), L["THREAD_HANDLE_INVALID"], fname )
+        return nil, errorMsg
+    end
+
+    if not handleIsInMorgue( thread_h ) then
+        errorMsg = formatErrorMsg( utils:dbgPrefix(), L["THREAD_NOT_COMPLETED"], fname )
+        return nil, errorMsg
+    end
+
+	local metricsTable = {}
+	metricsTable.threadId 		= thread_h[TH_UNIQUE_ID]
+	metricsTable.Lifetime 		= thread_h[TH_TIME_COMPLETED] - thread_h[TH_TIME_CREATED]
+	metricsTable.elapsedTicks	= thread_h[TH_ELAPSED_TICKS]
+	metricsTable.yieldTicks 	= thread_h[TH_YIELD_TICKS]
+	metricsTable.resumptions 	= thread_h[TH_RESUMPTIONS]
+
+	return metricsTable 
+end
+
+-- called OnEvent PLAYER_LOGIN
+-- this doesn't return until WoWThreads has beein inititalized.
+function thread:mgmtBootstrap()
+    if WoWThreadsStarted then return end
+    
+    startTimer( CLOCK_TICK_INTERVAL)
+
+    while not WoWThreadsStarted do
+        C_Timer.After(1.0, 
+        function() 
+            if WoWThreadsStarted then
+                return WoWThreadsStarted
+            end
+        end)
+    end
+    return WoWThreadsStarted
 end
 
