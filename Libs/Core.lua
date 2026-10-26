@@ -58,3 +58,5 @@ function core:getLibInfo()
     return gitVersion, localizedVersion, expansionName
 end
 
+ns.Core.loaded = true
+
