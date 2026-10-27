@@ -1,0 +1,45 @@
+WoWThreads: Runtime‑Programmable Concurrency for World of Warcraft Addons
+Most World of Warcraft addons are built around a simple event‑driven model: the game fires events, and the addon reacts. This model works, but it forces developers into a single execution path — one that is synchronous, linear, and tightly coupled to the client’s event loop. WoWThreads introduces a different paradigm: runtime‑programmable concurrency, built entirely on Lua coroutines and a lightweight signal‑passing architecture.
+
+At its core, WoWThreads provides a cooperative threading system where each thread is a coroutine running a developer‑defined function. Threads communicate exclusively through signals — small, structured messages that carry not only identifiers and payloads, but potentially executable work. This signal‑driven model mirrors the architecture of systems like Erlang, Akka, and libdispatch, where actors exchange messages and spawn new workers dynamically in response to changing conditions.
+
+The result is a concurrency framework that allows addons to adapt their behavior at runtime. A thread can complete its current task, notify a controller via SIG_COMPLETE, and immediately receive a new function to execute via SIG_START. The controller can send not just data, but actual functions and arguments, enabling the receiving thread to create new worker threads on the fly:
+
+lua
+local sig, sender, payload = signalHelper(sigEntry)
+local fn = payload.fn
+local args = payload.args
+
+local child_h = thread:create(30, function()
+    return fn(unpack(args))
+end)
+This pattern opens the door to addon architectures that were previously impossible in WoW’s environment.
+
+Dynamic Module Loading
+An addon can load modules at runtime and inject new behavior into a running thread. A module table can be sent as a signal payload; the wrapper thread can execute its entry point immediately, without requiring a reload or static initialization.
+
+Real‑Time Combat Adaptation
+A combat tracer can detect patterns — boss phases, aura changes, damage spikes — and dispatch specialized behavior functions to a worker thread. The worker thread can be created dynamically, execute the behavior, and terminate cleanly when finished.
+
+Plugin Systems
+Plugins can register functions with a dispatcher thread. When conditions warrant, the dispatcher sends a signal containing the plugin’s function and arguments. The wrapper thread receives the signal, spawns a worker thread, and executes the plugin’s logic in isolation. This creates a modular, extensible addon architecture where plugins behave like actors in a message‑driven system.
+
+Dynamic Behavior Engines
+Because signals can carry executable work, WoWThreads enables addons to behave like small distributed systems. A controller thread can supervise multiple workers, dispatch tasks, restart failed threads, and adapt to changing game conditions — all without blocking the client or relying on brittle event chains.
+
+A Clean, Deterministic Protocol
+The elegance of WoWThreads comes from its simplicity. A typical interaction looks like this:
+
+Wrapper waits for SIG_START  
+The wrapper thread blocks until the controller tells it to begin.
+
+Wrapper executes its assigned work  
+It may spawn child threads, yield, receive signals, or run tests.
+
+Wrapper signals SIG_COMPLETE  
+It informs the controller that its work is finished.
+
+Controller sends SIG_TERMINATE  
+The wrapper exits cleanly, and the controller moves on.
+
+This protocol is small, deterministic, and expressive — and it gives addon developers a concurrency model that feels more like Erlang than Lua.
