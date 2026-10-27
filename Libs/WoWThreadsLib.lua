@@ -24,12 +24,12 @@ local DEFAULT_YIELD_TICKS    = 1
 local THREAD_SEQUENCE_ID     = 4 -- a number representing the order in which the thread was created
 
 local threadControlBlock    = {} -- Table to hold all running and suspended threads
-local conditionTable        = {} -- Table for threads waiting on a condition
+local sleepTable            = {} -- Table for threads waiting on a condition
 local morgue                = {}
 
 local CLOCK_TICK_INTERVAL    = 1/GetFramerate() -- approx 16.7 ms on a 60Hz system
 local WoWThreadsStarted      = false
-local debuggingIsEnabled     = true
+local debuggingIsEnabled     = false
 local dataCollectionIsEnabled = false
 -- =====================================================================
 --                      NUMERIC CONSTANTS
@@ -38,7 +38,7 @@ local TH_COROUTINE          = 1 -- the coroutine created to execute the thread's
 local TH_COROUTINE_ARGS     = 2
 local TH_UNIQUE_ID          = 3 -- a number representing the order in which the thread was created
 local TH_SIGNAL_QUEUE       = 4 -- a table of all currently pending signals
-local TH_YIELD_TICKS        = 5 -- the number of clock ticks for which a thread must suspend after a yield.
+local TH_YIELD_TICKS        = 5 -- the number of clock tics for which a thread must suspend after a yield.
 local TH_REMAINING_TICKS    = 6
 local TH_RESUMPTIONS        = 7 -- the number of times a thread yields
 local TH_CHILDREN           = 8
@@ -46,7 +46,8 @@ local TH_PARENT_HANDLE      = 9
 local TH_ADDON_NAME       	= 10
 local TH_ELAPSED_TICKS		= 11
 local TH_TIME_CREATED       = 12 -- timestamped from debugprofilestop()
-local TH_TIME_COMPLETED     = 13 -- timestamped from debugprofilestop()
+local TH_EXECUTION_STATE    = 13 -- "sleep", "suspended", "dead"
+local TH_TIME_COMPLETED     = 14 -- timestamped from debugprofilestop()
 local TH_NUM_HANDLE_ELEMENTS = TH_TIME_COMPLETED
 
 -- Each thread has a signal queue. Each element in the signal queue contain
@@ -132,38 +133,27 @@ local function handleIsInMorgue( H )
 	return nil
 end
 local function wakeupThread(H)
-    if #conditionTable == 0 then 
+    if #sleepTable == 0 then 
         return nil, L["THREAD_NOT_FOUND"]
     end
 
-    for i, entry in ipairs(conditionTable) do
+    for i, entry in ipairs(sleepTable) do
         if entry[TH_UNIQUE_ID] == H[TH_UNIQUE_ID] then
-            table.remove( conditionTable, i )
+            table.remove( sleepTable, i )
             table.insert( threadControlBlock, H )			        
-            H[TH_REMAINING_TICKS] = 1
             return H, nil
         end
     end
     return nil, L["THREAD_NOT_FOUND"]
 end
-local function inConditionTable( H )
-	if #conditionTable == 0 then return nil end
-
-	for _, entry in ipairs( conditionTable ) do
-		if entry[TH_UNIQUE_ID] == H[TH_UNIQUE_ID] then
-			return H
-		end
-	end
-	return nil
-end
 -- deprecated
 local function getHandleOfCallingThread()
     return CURRENTLY_RUNNING_THREAD
 end
-local function createHandle( addonName, parent_h, yieldTicks, func, ...)
+local function createHandle( addonName, parent_h, yieldTics, func, ...)
 
-    if yieldTicks < DEFAULT_YIELD_TICKS then
-        yieldTicks = DEFAULT_YIELD_TICKS
+    if yieldTics < DEFAULT_YIELD_TICKS then
+        yieldTics = DEFAULT_YIELD_TICKS
     end
 
     THREAD_SEQUENCE_ID = THREAD_SEQUENCE_ID + 1
@@ -172,7 +162,7 @@ local function createHandle( addonName, parent_h, yieldTicks, func, ...)
         [TH_COROUTINE_ARGS]     = {...},
         [TH_UNIQUE_ID]          = THREAD_SEQUENCE_ID,
         [TH_SIGNAL_QUEUE]       = sig.new(),
-        [TH_YIELD_TICKS]        = yieldTicks,
+        [TH_YIELD_TICKS]        = yieldTics,
         [TH_REMAINING_TICKS]    = 1,
         [TH_ELAPSED_TICKS]      = 0,
         [TH_RESUMPTIONS]        = 0,
@@ -180,6 +170,7 @@ local function createHandle( addonName, parent_h, yieldTicks, func, ...)
         [TH_PARENT_HANDLE]      = parent_h,
         [TH_ADDON_NAME]         = ADDON_NAME,
         [TH_TIME_CREATED]       = debugprofilestop(),
+        [TH_EXECUTION_STATE]    = "suspended",
         [TH_TIME_COMPLETED]     = 0,
     }
     if parent_h ~= nil then
@@ -210,30 +201,8 @@ local function moveToMorgue( H, normalCompletion )
         -- don't need this anymore.
     end
 end
--- returns true if successful, false otherwise + errorMsg
-local function moveToConditionTable( H )
-    local errorMsg = nil
-
-    -- Remove thread from TCB and insert it into the condition table
-    for i, entry in ipairs(threadControlBlock) do
-        if H[TH_UNIQUE_ID] == entry[TH_UNIQUE_ID] then
-            table.remove(threadControlBlock, i)
-            table.insert( conditionTable, H )
-            dbgLog( utils:dbgPrefix(), string.format("Thread[%d] removed from TCB, inserted into condition table.\n", H[TH_UNIQUE_ID]) )
-            return true, nil
-        end
-    end
-    local logMsg = string.format("Thread[%d] not found in the condition table.", H[TH_UNIQUE_ID])
-    dbgLog( utils:dbgPrefix(), logMsg )
-    return false, L["THREAD_NOT_FOUND"]
-end
-
 local function handleIsValid(H)
     local isValid = true
-
-    if H == nil then
-        return false, L["PARAMETER_NIL"]
-    end
 
     if type(H) ~= "table" then
         return false, L["INVALID_TYPE"]
@@ -241,8 +210,8 @@ local function handleIsValid(H)
     if type(H[TH_SIGNAL_QUEUE]) ~= "table" then
         return false, L["INVALID_TYPE"]
     end
+
     if type(H[TH_COROUTINE]) ~= "thread" then
-        utils:dbgPrint( type( H[TH_COROUTINE]))
         return false, L["INVALID_TYPE"]
     end
 
@@ -401,7 +370,7 @@ end
 
 --[[@Begin
 Signature:
-    thread_h, errorMsg = thread:create(yieldTicks, threadFunction [, ...])
+    thread_h, errorMsg = thread:create(yieldTics, threadFunction [, ...])
 
 Description:
     Creates a new executable thread and returns its thread handle (thread_h).
@@ -409,10 +378,10 @@ Description:
     to manage, schedule, and track the coroutine associated with the thread.
 
 Parameters:
-    - yieldTicks (number)
-        The number of scheduler ticks the new thread will wait before its first
-        execution. A scheduler tick corresponds to one frame update. On a 60 FPS
-        system, one tick is approximately 16.7 milliseconds. For example, 60 ticks
+    - yieldTics (number)
+        The number of scheduler tics the new thread will wait before its first
+        execution. A scheduler tic corresponds to one frame update. On a 60 FPS
+        system, one tic is approximately 16.7 milliseconds. For example, 60 tics
         is roughly one second.
 
     - threadFunction (function)
@@ -438,7 +407,7 @@ Returns:
 
         Example:
             If FooBar.lua calls thread:create() at line 45 with an invalid
-            yieldTicks value, the error message may look like:
+            yieldTics value, the error message may look like:
 
             "[FooBar.lua:45] Unknown or unexpected data type | Caller: thread:create()"
 
@@ -453,12 +422,12 @@ Usage Example:
     end
 @End]]
 
-function thread:create( yieldTicks, someFunction,... )
+function thread:create( yieldTics, someFunction,... )
     local fname = "thread:create()"
     local parent_h = nil
     local errorMsg = nil
 
-    if type( yieldTicks) ~= "number" then
+    if type( yieldTics) ~= "number" then
         errorMsg = formatErrorMsg( utils:dbgPrefix(), L["INVALID_TYPE"], fname )
         return nil, errorMsg
     end
@@ -478,10 +447,10 @@ function thread:create( yieldTicks, someFunction,... )
         addonName = parent_h[TH_ADDON_NAME]
     end
 
-    local H = createHandle( addonName, parent_h, yieldTicks, someFunction, ... )
+    local H = createHandle( addonName, parent_h, yieldTics, someFunction, ... )
 
     table.insert( threadControlBlock, H )
-    local logMsg = string.format("Thread[%d] (ticks %d) inserted into TCB.", H[TH_UNIQUE_ID], H[TH_YIELD_TICKS])
+    local logMsg = string.format("Thread[%d] (tics %d) inserted into TCB.", H[TH_UNIQUE_ID], H[TH_YIELD_TICKS])
     dbgLog( utils:dbgPrefix(),  logMsg )
     return H, nil
 end
@@ -522,13 +491,17 @@ function thread:getAddonName( thread_h )
     if thread_h == nil then
         thread_h = CURRENTLY_RUNNING_THREAD
     end
+    local isValid, errorMsg = handleIsValid( thread_h)
+    if not isValid then
+        return nil, errorMsg
+    end
     return thread_h[TH_ADDON_NAME], nil
 end
 
 --[[@Begin
 Signature: thread:yield()
-Description: Suspends the calling thread for the number of ticks specified in the
-yieldTicks parameter of the calling thread's create function. Note that thread:yield()
+Description: Suspends the calling thread for the number of tics specified in the
+yieldTics parameter of the calling thread's create function. Note that thread:yield()
 is always fatal if the caller is NOT a thread.
 Parameters:
 - None.
@@ -537,7 +510,7 @@ Returns:
 Usage:
     local DONE = false
 	while not DONE do
-		thread:yield()  -- suspend the thread for its specified yieldTicks interval
+		thread:yield()  -- suspend the thread for its specified yieldTics interval
 		local sigEntry = thread:getSignal()
 		if sigEntry[1] == SIG_TERMINATE then
 			DONE = true
@@ -547,16 +520,13 @@ Usage:
 	end
 @End]]
 function thread:yield()
-    CURRENTLY_RUNNING_THREAD[TH_YIELD_TICKS] = CURRENTLY_RUNNING_THREAD[TH_YIELD_TICKS] + 1
     coroutine.yield()
     H = CURRENTLY_RUNNING_THREAD
     H[TH_RESUMPTIONS] = H[TH_RESUMPTIONS] + 1
 
 end
-
 -- Signature: hasCompleted, errorMsg - thread:hasCompleted( thread_h )
 function thread:hasCompleted( thread_h )
-    local hasCompleted = true
     local fname = "thread:hasCompleted()"
     local errorMsg = nil
 
@@ -570,22 +540,38 @@ function thread:hasCompleted( thread_h )
         errorMsg = formatErrorMsg(utils:prefix(), errorMsg, fname)
         return false, errorMsg
     end
+    if thread_h[TH_EXECUTION_STATE] == "dead" then
+        return true, nil
+    end
+    return false, errorMsg 
+end
+function thread:getExecutionState( H )
+    local fname = "thread:getExecutionState()"
+    local errorMsg = nil
 
-    local hasCompleted = handleIsInMorgue( thread_h )
-	return hasCompleted, errorMsg
+    if H == nil then
+        errorMsg = formatErrorMsg( utils:dbgPrefix(),  L["THREAD_HANDLE_NIL"], fname )
+        return nil, errorMsg
+    end
+    local isValid, errorMsg = handleIsValid( H )
+    if not isValid then
+        errorMsg = formatErrorMsg( utils:dbgPrefix(), L["THREAD_HANDLE_INVALID"], fname )
+        return nil, errorMsg
+    end
+    return H[TH_EXECUTION_STATE]
 end
 
 --[[@Begin
-Signature: local ticksDelayed, errorMsg = thread:delay( ticks )
-Description: Suspends the calling thread for the specified number of ticks. 
+Signature: local ticsDelayed, errorMsg = thread:delay( tics )
+Description: Suspends the calling thread for the specified number of tics. 
 Note: when signaled, delayed threads respond as normal. Note: thread:delay()
 is always fatal if the caller is not a thread.
 Parameters:
-- ticks (number): the number of ticks the thread is to be delayed.
-Note that when the delay has expired, the thread's specified yield ticks
+- tics (number): the number of tics the thread is to be delayed.
+Note that when the delay has expired, the thread's specified yield tics
 will have been
 Returns:
-- Success: the actual number of ticks the thread was delayed. The errorMsg is set to nil.
+- Success: the actual number of tics the thread was delayed. The errorMsg is set to nil.
 - Failure: the handle is nil, and the errorMsg parameter contains an error message (errorMsg[1])
 and a stack trace (errorMsg[2]).
 Usage:
@@ -596,10 +582,12 @@ Usage:
         return 
     end
 @End]]
-function thread:delay(delayTicks)
+
+-- Adjusts the number of yield tics to the delay tics.
+function thread:delay(delayTics)
     local fname = "thread:delay()"
 	local errorMsg = nil
-    if not delayTicks or type(delayTicks) ~= "number" then
+    if not delayTics or type(delayTics) ~= "number" then
         errorMsg = formatErrorMsg(utils:dbgPrefix(), L["INVALID_TYPE"], fname)
 		return false, errorMsg
     end
@@ -607,78 +595,31 @@ function thread:delay(delayTicks)
     local H = getHandleOfCallingThread()
     
     -- Set delay and remove from TCB
-    H[TH_REMAINING_TICKS] = delayTicks
+    H[TH_REMAINING_TICKS] = delayTics
     coroutine.yield()
-    return true, nil
 end
+-- moves a thread from the TCB into the sleep table. No adjustment
+-- to the thread's yield tics.
 function thread:sleep()
+    local H = getHandleOfCallingThread()
+
+    for i, entry in ipairs(sleepTable) do
+        if entry[TH_UNIQUE_ID] == H[TH_UNIQUE_ID] then
+            table.remove( sleepTable, i )
+            table.insert( threadControlBlock, H )			        
+            return H, nil
+        end
+    end
 end
+
+-- Moves a thread from the sleep table into the TCB
 function thread:wakeup( thread_h )
 end
-function thread:halt( thread_h )
-end
+-- removes the target thread from the TCB to the morgue and
+-- ets the thread's coroutine to nil
 function thread:kill( thread_h )
 end
 
---[[@Begin
-Signature:
-    payload, errorMsg = thread:conditionWait()
-
-Description:
-    Suspends the calling thread indefinitely until a condition is met.
-    A thread in condition-wait state is removed from the runnable queue
-    and does not receive normal signals. It is resumed only when another
-    thread sends SIG_CONDITION_MET to it. The SIG_CONDITION_MET signal
-    may include a payload describing the condition that was satisfied.
-
-    This service may only be invoked by the running thread. The library
-    verifies that the calling context is valid; no thread may place
-    another thread into condition-wait state.
-
-Parameters:
-    None.
-
-Returns:
-    Success:
-        - payload: The condition payload delivered with SIG_CONDITION_MET.
-                   This may contain event information, data structures,
-                   or any context the signaling thread provides.
-        - errorMsg: nil
-
-    Failure:
-        - payload: nil
-        - errorMsg: A localized error message describing the failure.
-                    Failure occurs when:
-                        * The calling thread cannot be identified.
-                        * The thread is not found in the condition-wait table
-                          upon resumption (internal state corruption).
-                        * A signal other than SIG_CONDITION_MET resumes the
-                          thread.
-    Usage Example:
-    local payload, errorMsg = thread:conditionWait()
-    if not payload then
-        print(errorMsg)
-        return
-    end
-
-    -- Process the condition that resumed the thread
-    print("Condition met:", payload.condition)
-    -- Additional payload fields may be accessed as needed.
-@End]]
-function thread:conditionWait()
-    local fname = "thread:conditionWait()"
-	local errorMsg = nil
-	local success = true
-
-	H = CURRENTLY_RUNNING_THREAD
-	if not H then
-		errorMsg = formatErrorMsg( utils:dbgPrefix(), L["NO_THREAD_CONTEXT"], fname )
-		return nil, errorMsg
-	end
-	errorMsg = formatErrorMsg( utils:dbgPrefix(), L["THREAD_NOT_FOUND"], fname)
-    moveToConditionTable( H )
-	return nil, errorMsg
-end
 --[[@Begin
 Signature: thread_h, errorMsg = thread:getSelf()
 Description: Gets the handle of the calling thread.
@@ -1069,7 +1010,7 @@ function thread:mgmtGetNumPendingSignals()
     return H[TH_SIGNAL_QUEUE]:size(), nil
 end
 --[[@Begin
-local metrics = { threadId, lifeTimeMS, lifetimeTicks, yieldReumptions}
+local metrics = { threadId, lifeTimeMS, lifetimeTics, yieldReumptions}
 Signature: metrics, errorMsg  = thread:getMetrics( thread_h )
 Description: Gets some some basic execution metrics; the runtime (ms) and   
 congestion (how long the thread had to wait to begin execution after having
@@ -1080,8 +1021,8 @@ Returns:
 - metrics (table): containing the following elements
 - metrics.threadId: The thread's unique identifier
 - metrics.lifeTimeMS: total time thread was running in milliseconds.
-- metrics.lifeTimeTicks: total time thread was running in clock ticks.
-- metrics.yieldTicks: The thread's yield interval is ticks (1/framerate)
+- metrics.lifeTimeTics: total time thread was running in clock tics.
+- metrics.yieldTics: The thread's yield interval is tics (1/framerate)
 - metrics.resumptions: number of times the thread resumed from a yield.
 - errorMsg - nil if successful otherwise r[1] is an error message, r[2] is the function, r[3] is a stack trace.
 Usage:
@@ -1110,18 +1051,16 @@ function thread:getMetrics( thread_h )
 	local metricsTable = {}
 	metricsTable.threadId 		= thread_h[TH_UNIQUE_ID]
 	metricsTable.Lifetime 		= thread_h[TH_TIME_COMPLETED] - thread_h[TH_TIME_CREATED]
-	metricsTable.elapsedTicks	= thread_h[TH_ELAPSED_TICKS]
-	metricsTable.yieldTicks 	= thread_h[TH_YIELD_TICKS]
+	metricsTable.elapsedTics	= thread_h[TH_ELAPSED_TICKS]
+	metricsTable.yieldTics 	= thread_h[TH_YIELD_TICKS]
 	metricsTable.resumptions 	= thread_h[TH_RESUMPTIONS]
 
 	return metricsTable 
 end
-
--- called OnEvent PLAYER_LOGIN
+-- called by the OnEvent handler when PLAYER_LOGIN fires.
 -- this doesn't return until WoWThreads has beein inititalized.
 function thread:mgmtBootstrap()
-    if WoWThreadsStarted then return end
-    
+    if WoWThreadsStarted then return WoWThreadsStarted end
     startTimer( CLOCK_TICK_INTERVAL)
 
     while not WoWThreadsStarted do

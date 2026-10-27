@@ -10,7 +10,7 @@ ns.ReportResults = ns.ReportResults or {}
 local core      = ns.Core
 local post      = ns.PostMessages
 local utils     = ns.UtilsLib
-local report    = ns.ReportResults
+local report    = ns.ReportResults 
 local L         = ns.Locales
 
 local _, localizedVersion = core:getLibInfo()

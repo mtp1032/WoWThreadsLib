@@ -64,20 +64,21 @@ local function collectData()
 
     -- wait for test results
     while not DONE do
+         thread:yield()
         local sigEntry, errorMsg = thread:getSignal()
         assert( sigEntry, errorMsg )
-        local signal, sender_h, testInfo = signalHelper( sigEntry )
 
-        if signal == SIG_CONDITION_MET then
-            if testInfo then                
-                table.insert( testResults, testInfo )
-                post:message( testInfo )
+        local signal, sender_h, resultsTable = signalHelper( sigEntry )
+        assert( resultsTable ~= nil, "resultsTable was nil")
+        assert( type(resultsTable == "table", "INVALID DATA TYPE"))
+        assert( #resultsTable == 3, "Expected 3 formatted strings")
+
+    
+        if resultsTable then 
+            for i = 1, #resultsTable do
+                post:message( string.format("%s\n", resultsTable[i] ))
             end
-
         end
-
-        if signal == SIG_TERMINATE then return end
-        thread:yield()
     end
 end
 
