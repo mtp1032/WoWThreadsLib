@@ -36,85 +36,81 @@
   - [The WoWThreads API](#the-wowthreads-api)
       - [thread:create](#threadcreate)
       - [Description:](#description)
-      - [Parameters:](#parameters)
-      - [Returns:](#returns)
+      - [Function Parameters:](#function-parameters)
+      - [Function Returns:](#function-returns)
       - [Usage:](#usage)
       - [thread:getAddonName](#threadgetaddonname)
+      - [thread:yield](#threadyield)
       - [Description:](#description-1)
+      - [Parameters:](#parameters)
+      - [Returns:](#returns)
+      - [Usage:](#usage-1)
+      - [Signature:](#signature)
+      - [Description:](#description-2)
       - [Parameters:](#parameters-1)
       - [Returns:](#returns-1)
-      - [Usage:](#usage-1)
-      - [thread:yield](#threadyield)
-      - [Description:](#description-2)
+      - [Usage:](#usage-2)
+      - [Signature:](#signature-1)
+      - [Description:](#description-3)
       - [Parameters:](#parameters-2)
       - [Returns:](#returns-2)
-      - [Usage:](#usage-2)
-      - [Signature:](#signature)
-      - [Description:](#description-3)
+      - [Usage:](#usage-3)
+      - [Signature:](#signature-2)
+      - [Description:](#description-4)
       - [Parameters:](#parameters-3)
       - [Returns:](#returns-3)
-      - [Usage:](#usage-3)
-      - [Signature:](#signature-1)
-      - [Description:](#description-4)
+      - [Usage:](#usage-4)
+      - [Signature:](#signature-3)
+      - [Description:](#description-5)
       - [Parameters:](#parameters-4)
       - [Returns:](#returns-4)
-      - [Usage:](#usage-4)
-      - [Signature:](#signature-2)
-      - [Description:](#description-5)
+      - [Usage:](#usage-5)
+      - [Signature:](#signature-4)
+      - [Description:](#description-6)
       - [Parameters:](#parameters-5)
       - [Returns:](#returns-5)
-      - [Usage:](#usage-5)
-      - [Signature:](#signature-3)
-      - [Description:](#description-6)
+      - [Usage:](#usage-6)
+      - [Signature:](#signature-5)
+      - [Description:](#description-7)
       - [Parameters:](#parameters-6)
       - [Returns:](#returns-6)
-      - [Usage:](#usage-6)
-      - [Signature:](#signature-4)
-      - [Description:](#description-7)
-      - [Parameters:](#parameters-7)
-      - [Returns:](#returns-7)
       - [Usage:](#usage-7)
-      - [Signature:](#signature-5)
-      - [Description:](#description-8)
-      - [Parameters:](#parameters-8)
-      - [Returns:](#returns-8)
-      - [Usage:](#usage-8)
       - [Signature:](#signature-6)
+      - [Description:](#description-8)
+      - [Usage:](#usage-8)
+      - [Signature:](#signature-7)
       - [Description:](#description-9)
       - [Usage:](#usage-9)
-      - [Signature:](#signature-7)
-      - [Description:](#description-10)
-      - [Usage:](#usage-10)
       - [Signature:](#signature-8)
+      - [Description:](#description-10)
+      - [Parameters:](#parameters-7)
+      - [Returns:](#returns-7)
+      - [Usage:](#usage-10)
+      - [Signature:](#signature-9)
       - [Description:](#description-11)
+      - [Parameters:](#parameters-8)
+      - [Returns:](#returns-8)
+      - [Usage:](#usage-11)
+      - [Signature:](#signature-10)
+      - [Description:](#description-12)
       - [Parameters:](#parameters-9)
       - [Returns:](#returns-9)
-      - [Usage:](#usage-11)
-      - [Signature:](#signature-9)
-      - [Description:](#description-12)
+      - [Usage:](#usage-12)
+      - [Signature:](#signature-11)
+      - [Description:](#description-13)
       - [Parameters:](#parameters-10)
       - [Returns:](#returns-10)
-      - [Usage:](#usage-12)
-      - [Signature:](#signature-10)
-      - [Description:](#description-13)
+      - [Usage:](#usage-13)
+      - [Signature:](#signature-12)
+      - [Description:](#description-14)
       - [Parameters:](#parameters-11)
       - [Returns:](#returns-11)
-      - [Usage:](#usage-13)
-      - [Signature:](#signature-11)
-      - [Description:](#description-14)
+      - [Usage:](#usage-14)
+      - [Signature:](#signature-13)
+      - [Description:](#description-15)
       - [Parameters:](#parameters-12)
       - [Returns:](#returns-12)
-      - [Usage:](#usage-14)
-      - [Signature:](#signature-12)
-      - [Description:](#description-15)
-      - [Parameters:](#parameters-13)
-      - [Returns:](#returns-13)
       - [Usage:](#usage-15)
-      - [Signature:](#signature-13)
-      - [Description:](#description-16)
-      - [Parameters:](#parameters-14)
-      - [Returns:](#returns-14)
-      - [Usage:](#usage-16)
 ## Preface
 
 I am a developer who could have written that second aphorism. I’m a [former] software engineer/architect and I have a love‑hate relationship with threading. I’ve written thousands of lines of multithreaded applications, including protected‑mode operating system internals. For Linux, I wrote the first POSIX thread package, **PCThreads**. Over the years, I’ve learned that while experience with multithreading can be impressive on a résumé, using multiple threads seldom lives up to their hype. And so it is with threads when applied to WoW addon programming. They can be quite useful, but lead to madness if not applied appropriately.
@@ -529,7 +525,6 @@ Examples:
 
 ```
 [Signal.lua:56] Invalid or unknown signal: thread:getSignalName()
-[Thread.lua:112] Attempt to resume a dead thread: thread:resume()
 ```
 
 Addons should always check return values:
@@ -621,41 +616,39 @@ Both versions expose the same public API. The difference lies only in packaging,
 ---
 
 #### thread:create
-thread_h, result = thread:create( yieldTicks, func [,...] )
+```thread_h, result = thread:create( yieldTicks, func [,...] )```
 
-#### Description:
-Creates a reference (a handle from this point forward) to an executable thread. The reference is called a 
-thread handle and is an opaque reference to the thread's coroutine and its attributes. The thread handle is used by the library's internals to manage and schedule the thread.
+#### Description: 
+Creates a reference (a handle from this point forward) to an executable thread. The reference is called a thread handle and is an opaque reference to the thread's coroutine and its attributes. The thread handle is used by the library's internals to manage and schedule the thread.
 
-#### Parameters:
-- yieldTicks (number). The duration of time the calling thread is to
+#### Function Parameters:
+- yieldTicks (type: number). The duration of time the calling thread is to
 be suspended. The time is specified in clock ticks.In WoW, a clock tick 
 is the reciprocal of your system's frame rate. On my system, a clock tick 
 is about 16.7 milliseconds (1/60). Therefore, 60 ticks is about 1 second.
-- func (function). The function the thread is to execute. In 
+- func (type: function). The function the thread is to execute. In 
 POSIX and other thread environments, the thread function is often 
 called the action routine.
 - ... (varargs, optional), Additional arguments to be passed to the thread function.
 
-#### Returns:
-- Success: a valid thread handle is returned and the result is set to nil.
-- Failure: nil is returned and the result parameter specifies an error message (result[1])
-and a stack trace (result[2]).
+#### Function Returns:
+- On success, a valid thread handle is returned and the error message is set to nil.
+- On failure, The thread handle is valid and the error message is 
 
 #### Usage:
 ```lua
     local function greetings( greetingString )
-            print( greetingString )
-        end
-        local thread_h, result = thread:create( 60, greetings, "Hello World" )
-        if not thread_h then 
-            print( result[1], result[2]) 
-            return 
-        end
+        print( greetingString )
+    end
+    local thread_h, result = thread:create( 60, greetings, "Hello World" )
+    if not thread_h then 
+        print( result[1], result[2]) 
+        return 
+    end
 ```
 
 #### thread:getAddonName
-addonName, result = thread:getAddonName( [thread_h] )
+```addonName, result = thread:getAddonName( [thread_h] )
 
 #### Description:
 Obtains the name of the addon within which the specified
@@ -665,15 +658,15 @@ among multiple addons, the thread's addon name serves to distinguish
 threads by the addon within which they were created. This may prove
 useful when implementing shared callbacks.
 
+*NOTE: this function is not required in the embedded version of WoWThreads. In the
+shared version, where all addons share the library, the addon's name is used by the shared versin to distinguish between threads.*
+
 #### Parameters:
-- thread_h (thread handle, optional). A handle to the thread whose addon name is to be 
-obtained. If not specified, the addon name of the calling thread will be returned.
+- thread_h (thread handle, optional). A handle to the thread whose addon name is to be obtained. If not specified, the addon name of the calling thread will be returned.
 
-#### Returns:
-- Success: Returns the name of the specified thread's addon and the result is set to nil.
-- Failure: the addonName is nil, and the result parameter contains an error message (result[1])
-and a stack trace (result[2]).
-
+#### Function Returns:
+- thread_h: if successful, thead_h is valid and the error message is nil
+- errorMsg: if successful, the describes the failure. Otherwse, the errorMsg is nil.
 #### Usage:
 ```lua
     -- This function is typically used to get the name of the addon for use when
