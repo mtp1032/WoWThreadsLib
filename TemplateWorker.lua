@@ -10,7 +10,7 @@ local core      = ns.Core
 local utils     = ns.UtilsLib
 local collect   = ns.CollectResults
 local post      = ns.PostMessages
-local L         = ns.Locales.L
+local L         = ns.Locales
 
 local _, localizedVersion = core:getLibInfo()
 local thread = LibStub("WoWThreadsLib", localizedVersion )
@@ -36,6 +36,19 @@ local collector_h = collect:getCollectorHandle() -- to be wired in later
 local function signalHelper(sigEntry)
     return sigEntry[1], sigEntry[2], sigEntry[3]
 end
+
+local function strip(trace)
+    -- Remove directory path
+    trace = trace:gsub("^.*[/\\]", "")
+
+    -- Replace the second colon with " - "
+    -- Pattern: filename.lua:(line):(message)
+    -- We want: filename.lua:line - message
+    trace = trace:gsub("^(.-:%d+):%s*", "%1 - ")
+
+    return trace
+end
+
 
 -- Unit Tests
 local function unitTestOne()
@@ -82,10 +95,8 @@ local function testWrapper()
             if not succeeded then
                 local testName = "Detected attempt to index a nil value"
                 local result = "PASS"
-        
-                local infoStr = string.format( "[%s]: %s\nSTACK - %s)\n", result, testName, testResult )
+                local infoStr = string.format( "[%s]: %s\nSTACK - %s)\n", result, testName, strip(testResult) )
                 table.insert( tableTestResults, infoStr )
-                utils:dbgPrint( tostring( #tableTestResults))
             end
 
             --====================================================================
@@ -96,9 +107,8 @@ local function testWrapper()
                 local testName = "thread:create() - Detected invalid thread function"
                 local result = "PASS"
         
-                local infoStr = string.format( "[%s]: %s\nSTACK - %s)\n", result, testName, testResult )
+                local infoStr = string.format( "[%s]: %s\nSTACK - %s)\n", result, testName, strip(testResult) )
                 table.insert( tableTestResults, infoStr )
-                utils:dbgPrint( tostring( #tableTestResults))
             end
 
             --====================================================================
@@ -109,7 +119,7 @@ local function testWrapper()
                 local testName = "thread:create() - Detected invalid 'tic'"
                 local result = "PASS"
         
-                local infoStr = string.format( "[%s]: %s\nSTACK - %s)\n", result, testName, testResult )
+                local infoStr = string.format( "[%s]: %s\nSTACK - %s)\n", result, testName, strip(testResult) )
                 table.insert( tableTestResults, infoStr )
             end
 
