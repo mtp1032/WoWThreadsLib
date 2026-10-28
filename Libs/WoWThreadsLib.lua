@@ -29,7 +29,7 @@ local morgue                = {}
 
 local CLOCK_TICK_INTERVAL    = 1/GetFramerate() -- approx 16.7 ms on a 60Hz system
 local WoWThreadsStarted      = false
-local debuggingIsEnabled     = false
+local debuggingIsEnabled     = true
 local dataCollectionIsEnabled = false
 -- =====================================================================
 --                      NUMERIC CONSTANTS
@@ -46,9 +46,13 @@ local TH_PARENT_HANDLE      = 9
 local TH_ADDON_NAME       	= 10
 local TH_ELAPSED_TICKS		= 11
 local TH_TIME_CREATED       = 12 -- timestamped from debugprofilestop()
-local TH_EXECUTION_STATE    = 13 -- "sleep", "suspended", "dead"
+local TH_EXECUTION_STATE    = 13 -- "suspended", "dead"
 local TH_TIME_COMPLETED     = 14 -- timestamped from debugprofilestop()
-local TH_NUM_HANDLE_ELEMENTS = TH_TIME_COMPLETED
+local TH_EXIT_DATA          = 15 -- data (varargs) saved when thread:exit() is called
+local TH_ERROR_EXIT_STATUS  = 16 -- contains "normal" or "abnormal" exit
+local TH_ERROR_EXIT_STACK   = 17
+local TH_COROUTINE_ERROR    = 18
+local TH_NUM_HANDLE_ELEMENTS = TH_COROUTINE_ERROR
 
 -- Each thread has a signal queue. Each element in the signal queue contain
 -- a sigEntry, tuple consisting of 3 elements: the signal, the sending thread, 
@@ -112,6 +116,21 @@ local function dbgLog( prefix, msg )
         post:message( logMsg )
     end
 end
+local function formatErrorMsg( prefix, errorMsg, functionName )
+    local infoMsg = string.format("%s PASSED (%s) \n%s\n", prefix, functionName, errorMsg)
+    return infoMsg
+end
+
+local function getThreadMetrics( H )
+        local threadId 		= H[TH_UNIQUE_ID]
+        local lifetime 		= H[TH_TIME_COMPLETED] - H[TH_TIME_CREATED]
+        local elapsedTics	= H[TH_ELAPSED_TICKS]
+        local yieldTics 	= H[TH_YIELD_TICKS]
+        local resumptions 	= H[TH_RESUMPTIONS]
+
+    return {threadId, lifetime, elapsedTics, yieldTics, resumptions }
+end
+
 local function coroutineIsDead(H)
     local dead = false
 
@@ -192,6 +211,11 @@ local function createHandle( addonName, parent_h, yieldTics, func, ...)
         [TH_TIME_CREATED]       = debugprofilestop(),
         [TH_EXECUTION_STATE]    = "suspended",
         [TH_TIME_COMPLETED]     = 0,
+        [TH_EXIT_DATA]          = nil,
+        [TH_ERROR_EXIT_STATUS]  = nil, -- contains "normal" or "abnormal" exit
+        [TH_ERROR_EXIT_STACK]   = nil,
+        [TH_COROUTINE_ERROR]    = nil,
+
     }
     if parent_h ~= nil then
         table.insert( parent_h[TH_CHILDREN], H)
@@ -205,13 +229,13 @@ local function moveToMorgue( H, normalCompletion )
         if H[TH_UNIQUE_ID] == entry[TH_UNIQUE_ID] then
             H = removeFromTable( threadControlBlock, H)
             table.insert( morgue, H)
+            if H[TH_COROUTINE] ~= nil then H[TH_COROUTINE] = nil end
 
             if normalCompletion then
                 H[TH_TIME_COMPLETED] = debugprofilestop()
                 logMsg = string.format("Thread[%d] Normal termination.", H[TH_UNIQUE_ID] )
                 dbgLog( utils:dbgPrefix(), logMsg )
             else
-                H[TH_COROUTINE] = nil
                 logMsg = string.format("ABNORMAL termination. Thread[%d] has died a horrible death.\n", H[TH_UNIQUE_ID])
                 dbgLog( utils:dbgPrefix(), logMsg )
             end
@@ -252,15 +276,19 @@ end
 local function resumeThread(H)
     local co   = H[TH_COROUTINE]
     local args = H[TH_COROUTINE_ARGS] or {}
+
+    -- Increment resumption count
     H[TH_RESUMPTIONS] = H[TH_RESUMPTIONS] + 1
 
-    -- this will be the running thread once resume is complete
+    -- Mark this thread as currently running
     CURRENTLY_RUNNING_THREAD = H
-            -- Normal resume
-    local logMsg = string.format("Thread[%d] resumed.", H[TH_UNIQUE_ID])
-    dbgLog( utils:dbgPrefix(), logMsg )
 
+    dbgLog(utils:dbgPrefix(),
+        string.format("Thread[%d] resumed.", H[TH_UNIQUE_ID]))
+
+    --------------------------------------------------------------------
     -- Error handler for xpcall
+    --------------------------------------------------------------------
     local function errorHandler(err)
         return {
             ok      = false,
@@ -271,33 +299,34 @@ local function resumeThread(H)
     end
 
     --------------------------------------------------------------------
-    -- Run coroutine.resume under xpcall and normalize results
+    -- Run coroutine.resume under xpcall and capture raw results
     --------------------------------------------------------------------
     local raw = { xpcall(coroutine.resume, errorHandler, co, unpack(args)) }
 
+    -- Clear running thread marker
     CURRENTLY_RUNNING_THREAD = nil
 
     local ok        = raw[1]   -- xpcall succeeded?
     local resumeOK  = raw[2]   -- coroutine.resume succeeded?
 
-    -- Collect all coroutine return values (if any)
+    -- Collect all coroutine return values (yielded values)
     local values = {}
     for i = 3, #raw do
         values[#values+1] = raw[i]
     end
 
     --------------------------------------------------------------------
-    -- Normalize into a unified result object
+    -- Normalize into unified result object
     --------------------------------------------------------------------
     local result = {}
 
     if not ok then
         -- xpcall caught a Lua error inside coroutine.resume
-        local errObj    = raw[2]  -- this is the table returned by errorHandler
-        result.ok       = false
-        result.type     = "xpcall_error"
-        result.message  = errObj.message
-        result.stack    = errObj.stack
+        local errObj = raw[2]
+        result.ok      = false
+        result.type    = "xpcall_error"
+        result.message = errObj.message
+        result.stack   = errObj.stack
 
     elseif not resumeOK then
         -- coroutine.resume returned false → coroutine error
@@ -307,36 +336,61 @@ local function resumeThread(H)
         result.stack   = debugstack(2)
 
     else
-        -- coroutine resumed normally
+        -- Normal resume (yield or return)
         result.ok     = true
         result.values = values
     end
 
     --------------------------------------------------------------------
-    -- Handle thread lifecycle transitions
+    -- Handle abnormal exit (uncaught error)
     --------------------------------------------------------------------
     if not result.ok then
-        local logMsg = string.format(
-            "Thread[%d] died a horrible death %s - %s\n",
-            H[TH_UNIQUE_ID],
-            result.type,
-            tostring(result.message))
-            -- tostring(result.stack)
-        
-        dbgLog( utils:dbgPrefix(), logMsg )
+        H[TH_COROUTINE_ERROR] = {
+            type    = result.type,
+            message = result.message,
+            stack   = result.stack,
+        }
+
+        dbgLog(utils:dbgPrefix(),
+            string.format("Thread[%d] died a horrible death %s - %s",
+                H[TH_UNIQUE_ID], result.type, tostring(result.message)))
+
         moveToMorgue(H, false)
         return false, result.message
     end
 
+    --------------------------------------------------------------------
     -- Coroutine completed?
+    --------------------------------------------------------------------
     if coroutine.status(co) == "dead" then
-        local logMsg = string.format("Thread[%d] has completed", H[TH_UNIQUE_ID])
-        dbgLog( utils:dbgPrefix(), logMsg )
-        moveToMorgue(H, true)
+
+        -- Case 1: Normal exit via thread:exit()
+        if H[TH_EXIT_STATUS] == "normal_exit" then
+            dbgLog(utils:dbgPrefix(),
+                string.format("Thread[%d] exited normally", H[TH_UNIQUE_ID]))
+            moveToMorgue(H, true)
+
+        -- Case 2: Abnormal exit (already handled above)
+        elseif H[TH_COROUTINE_ERROR] then
+            -- No action; already moved to morgue
+
+        -- Case 3: Natural completion (function returned normally)
+        else
+            dbgLog(utils:dbgPrefix(),
+                string.format("Thread[%d] completed naturally", H[TH_UNIQUE_ID]))
+            moveToMorgue(H, true)
+        end
+
         return true, nil
     end
-    return true, nil
+
+    --------------------------------------------------------------------
+    -- Coroutine is still alive → return yielded values
+    --------------------------------------------------------------------
+    return true, unpack(result.values)
 end
+
+
 local function scheduleThreads()
     if #threadControlBlock == 0 then
         return
@@ -345,17 +399,16 @@ local function scheduleThreads()
     for i = #threadControlBlock, 1, -1 do
         local H = threadControlBlock[i]
         local co = H[TH_COROUTINE]
-        if coroutine.status(co) == "suspended" then
+        local status = coroutine.status(co)
+        -- XXXXX
+        if status == "suspended" then
             H[TH_REMAINING_TICKS] = H[TH_REMAINING_TICKS] - 1
             if H[TH_REMAINING_TICKS] <= 0 then
                 H[TH_REMAINING_TICKS] = H[TH_YIELD_TICKS]
 				---------------------------------------
                 local success, errorMsg = resumeThread(H)
                 ---------------------------------------
-                if not success then
-                    local logMsg = string.format("Thread[%d] error: %s", H[TH_UNIQUE_ID], errorMsg )
-                    dbgLog( utils:dbgPrefix(), logMsg )
-				end
+                local logMsg = string.format("Thread[%d] resumed.", H[TH_UNIQUE_ID])
             end
         end
     end
@@ -483,6 +536,51 @@ function thread:yield()
     H[TH_RESUMPTIONS] = H[TH_RESUMPTIONS] + 1
 end
 
+-- analogous to return, but permits the thread to save data for
+-- other threads to query. This service is called when a thread
+-- must save state before exiting. For example, if a thread receives
+-- a SIG_TERMINATE signal the dev can either execute a normal return
+-- or call thread:exit( data )
+-- WARNING: Calling this service will terminate the thread.
+function thread:exit(...)
+    local H = CURRENTLY_RUNNING_THREAD
+    if not H then
+        error("thread:exit() called outside of a running thread")
+    end
+
+    -- Store exit data (may be nil, string, table, etc.)
+    H[TH_EXIT_DATA] = ...
+
+    -- Mark this as a normal, intentional exit
+    H[TH_ERROR_EXIT_STATUS] = "normal_exit"
+
+    -- Optional: capture a stack trace for debugging
+    H[TH_ERROR_EXIT_STACK] = debugstack(2)
+
+    -- Yield control; scheduler will detect coroutine death
+    return coroutine.yield()
+end
+function thread:getExitData( thread_h )
+    local fname = "thread:getExitData()"
+    local errorMsg = nil
+
+    if not thread_h then
+        errorMsg = formatErrorMsg( utils:dbgPrefix(),  L["THREAD_HANDLE_NIL"], fname )
+        return nil, errorMsg
+    end
+    local isValid, errorMsg = handleIsValid( thread_h )
+    if not isValid then
+        errorMsg = formatErrorMsg( utils:dbgPrefix(),  L["THREAD_HANDLE_INVALID"], fname )
+        return nil, errorMsg
+    end
+    local co = thread_h[TH_COROUTINE]
+    if co.status ~= "suspended" then
+        errorMsg = formatErrorMsg( utils:dbgPrefix(), L["THREAD_NOT_COMPLETED"])
+        return nil, errorMsg
+    end
+    return thread_h[TH_EXIT_DATA], nil
+end
+
 --[[@Begin
 Signature:
     addonName, errorMsg = thread:getAddonName([thread_h])
@@ -528,23 +626,21 @@ end
 
 -- Signature: hasCompleted, errorMsg - thread:hasCompleted( thread_h )
 function thread:hasCompleted( thread_h )
---     local fname = "thread:hasCompleted()"
---     local errorMsg = nil
+    local fname = "thread:hasCompleted()"
+    local errorMsg = nil
 
---     if thread_h == nil then
---         errorMsg = formatErrorMsg(utils:dbgPrefix(), L["THREAD_HANDLE_NIL"], fname )
---         return false,  errorMsg
---     end
+    if thread_h == nil then
+        errorMsg = formatErrorMsg(utils:dbgPrefix(), L["THREAD_HANDLE_NIL"], fname )
+        return false,  errorMsg
+    end
 
---     local isValid, errorMsg = handleIsValid(thread_h)
---     if not isValid then
--- ?        return false, errorMsg
---     end
---     if thread_h[TH_EXECUTION_STATE] == "dead" then
---         return true, nil
---     end
---     return false, errorMsg 
-end
+    local isValid, errorMsg = handleIsValid(thread_h)
+    if not isValid then return false, errorMsg end
+
+    if thread_h[TH_EXECUTION_STATE] == "dead" then
+        return true, nil
+    end
+    return false, errorMsg end
 
 function thread:getExecutionState( H )
     local fname = "thread:getExecutionState()"
@@ -1015,14 +1111,9 @@ congestion (how long the thread had to wait to begin execution after having
 been resumed). Note: at this point, only completed threads can be queried.
 Parameters:
 - thread_h (thread_handle): the thread handle whose metrics are to be returned.
-Returns:
-- metrics (table): containing the following elements
-- metrics.threadId: The thread's unique identifier
-- metrics.lifeTimeMS: total time thread was running in milliseconds.
-- metrics.lifeTimeTics: total time thread was running in clock tics.
-- metrics.yieldTics: The thread's yield interval is tics (1/framerate)
-- metrics.resumptions: number of times the thread resumed from a yield.
-- errorMsg - nil if successful otherwise r[1] is an error message, r[2] is the function, r[3] is a stack trace.
+- Returns: 
+    table {threadId, lifetime, elapsedTics, yieldTics, resumptions }
+    nil or errorMsg
 Usage:
     local metrics,errorMsg = thread:getMetrics( thread_h )
 @End]]
@@ -1046,14 +1137,9 @@ function thread:getMetrics( thread_h )
         return nil, errorMsg
     end
 
-	local metricsTable = {}
-	metricsTable.threadId 		= thread_h[TH_UNIQUE_ID]
-	metricsTable.Lifetime 		= thread_h[TH_TIME_COMPLETED] - thread_h[TH_TIME_CREATED]
-	metricsTable.elapsedTics	= thread_h[TH_ELAPSED_TICKS]
-	metricsTable.yieldTics 	= thread_h[TH_YIELD_TICKS]
-	metricsTable.resumptions 	= thread_h[TH_RESUMPTIONS]
+	local metrics = getThreadMetrics( thread_h )
 
-	return metricsTable 
+	return metrics, nil
 end
 -- called by the OnEvent handler when PLAYER_LOGIN fires.
 -- this doesn't return until WoWThreads has beein inititalized.
