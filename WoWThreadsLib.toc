@@ -19,5 +19,5 @@ Libs\GlobalAuditor.lua
 
 ReportResults.lua
 CollectResults.lua
-##TestCreate.lua
-TemplateWorker.lua
+ParamFailures.lua
+Commands.lua
