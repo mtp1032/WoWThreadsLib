@@ -11,7 +11,7 @@ local core      = ns.Core
 local post      = ns.PostMessages
 local utils     = ns.UtilsLib
 local collect    = ns.CollectResults
-local L         = ns.Locales
+local L         = ns.Locales.L
 
 local _, localizedVersion = core:getLibInfo()
 local thread = LibStub("WoWThreadsLib", localizedVersion )
@@ -64,15 +64,17 @@ local function collectData()
 
     -- wait for test results
     while not DONE do
-         thread:yield()
+        thread:yield()
+        
         local sigEntry, errorMsg = thread:getSignal()
         assert( sigEntry, errorMsg )
 
         local signal, sender_h, resultsTable = signalHelper( sigEntry )
-        assert( resultsTable ~= nil, "resultsTable was nil")
-        assert( type(resultsTable == "table", "INVALID DATA TYPE"))
-        assert( #resultsTable == 3, "Expected 3 formatted strings")
-
+        if signal == SIG_COMPLETE then
+            assert( resultsTable ~= nil, "resultsTable was nil")
+            assert( type(resultsTable == "table", "INVALID DATA TYPE"))
+            assert( #resultsTable == 3, "Expected 3 test string(s), got", tostring(#resultsTable))
+        end
     
         if resultsTable then 
             for i = 1, #resultsTable do
