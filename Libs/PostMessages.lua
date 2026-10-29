@@ -1,7 +1,8 @@
 ADDON_NAME, ns = ...
 
 ns.PostMessages = ns.PostMessages or {}
-local post = ns.PostMessages 
+local post = ns.PostMessages
+local utils = ns.UtilsLib
 
 local L = ns.Locales.L
 --======================================================================
