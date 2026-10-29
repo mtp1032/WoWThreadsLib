@@ -19,5 +19,4 @@ Libs\GlobalAuditor.lua
 
 ReportResults.lua
 CollectResults.lua
-ParamFailures.lua
-Commands.lua
+TestThreadExit.lua
