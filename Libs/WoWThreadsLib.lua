@@ -104,6 +104,7 @@ local signalNameTable = thread.signalNameTable
 --                     LOCAL FUNCTIONS 
 --================================================================
 local function dbgLog( prefix, msg )
+
     if prefix == nil then
         error( "prefix was nil")
     end
@@ -117,7 +118,7 @@ local function dbgLog( prefix, msg )
     end
 end
 local function formatErrorMsg( prefix, errorMsg, functionName )
-    local infoMsg = string.format("%s PASSED (%s) \n%s\n", prefix, functionName, errorMsg)
+    local infoMsg = string.format("%s (%s) %s\n", prefix, functionName, errorMsg)
     return infoMsg
 end
 
@@ -139,7 +140,7 @@ local function coroutineIsDead(H)
         dead = true
     end
     return dead
-end
+    end
 local function removeFromTable(tbl, H)
     local targetId = H[TH_UNIQUE_ID]
     
@@ -208,14 +209,13 @@ local function createHandle( addonName, parent_h, yieldTics, func, ...)
         [TH_CHILDREN]           = {},
         [TH_PARENT_HANDLE]      = parent_h,
         [TH_ADDON_NAME]         = ADDON_NAME,
-        [TH_TIME_CREATED]       = debugprofilestop(),
         [TH_EXECUTION_STATE]    = "suspended",
+        [TH_TIME_CREATED]       = debugprofilestop(),
         [TH_TIME_COMPLETED]     = 0,
-        [TH_EXIT_DATA]          = nil,
-        [TH_ERROR_EXIT_STATUS]  = nil, -- contains "normal" or "abnormal" exit
-        [TH_ERROR_EXIT_STACK]   = nil,
-        [TH_COROUTINE_ERROR]    = nil,
-
+        [TH_EXIT_DATA]          = "",
+        [TH_ERROR_EXIT_STATUS]  = "", -- contains "normal" or "abnormal" exit
+        [TH_ERROR_EXIT_STACK]   = "",
+        [TH_COROUTINE_ERROR]    = "",
     }
     if parent_h ~= nil then
         table.insert( parent_h[TH_CHILDREN], H)
@@ -248,11 +248,16 @@ local function handleIsValid(H)
     if type(H) ~= "table" then
         return false, L["INVALID_TYPE"]
     end
+    if #H ~= TH_NUM_HANDLE_ELEMENTS then
+        local errorMsg = string.format("%s %d elements in handle.\n", utils:dbgPrefix(), #H )
+        return false, errorMsg
+    end
     if type(H[TH_SIGNAL_QUEUE]) ~= "table" then
         return false, L["INVALID_TYPE"]
     end
 
     if type(H[TH_COROUTINE]) ~= "thread" then
+        utils:dbgPrint( type( H[TH_COROUTINE]))
         return false, L["INVALID_TYPE"]
     end
 
@@ -270,7 +275,6 @@ local function signalIsValid(signal)
     if signal < SIG_READY or signal > SIG_NONE_PENDING then
         return false, L["SIGNAL_OUT_OF_RANGE"]
     end
-
     return true, nil
 end
 local function resumeThread(H)
@@ -380,14 +384,13 @@ local function resumeThread(H)
                 string.format("Thread[%d] completed naturally", H[TH_UNIQUE_ID]))
             moveToMorgue(H, true)
         end
-
         return true, nil
     end
 
     --------------------------------------------------------------------
     -- Coroutine is still alive → return yielded values
     --------------------------------------------------------------------
-    return true, unpack(result.values)
+return true, unpack(result.values)
 end
 
 
@@ -492,7 +495,6 @@ function thread:create( yieldTics, someFunction,... )
         return nil,  L["PARAMETER_NIL"]
     end
     parent_h = CURRENTLY_RUNNING_THREAD
-
 	-- If parent_h is nil, the caller must be the WoW game client whose 
 	-- addon name can be extracted from the stack trace.
     if parent_h == nil then 
@@ -503,7 +505,6 @@ function thread:create( yieldTics, someFunction,... )
     end
 
     local H = createHandle( addonName, parent_h, yieldTics, someFunction, ... )
-
     table.insert( threadControlBlock, H )
     local logMsg = string.format("Thread[%d] (tics %d) inserted into TCB.", H[TH_UNIQUE_ID], H[TH_YIELD_TICKS])
     dbgLog( utils:dbgPrefix(),  logMsg )
@@ -531,7 +532,16 @@ Usage:
 	end
 @End]]
 function thread:yield()
+    if #CURRENTLY_RUNNING_THREAD ~= 18 then
+        local trace = strip( debugstack(2))
+        utils:dbgPrint( trace, CURRENTLY_RUNNING_THREAD.TH_UNIQUE_ID )
+    end
     coroutine.yield()
+    if #CURRENTLY_RUNNING_THREAD ~= 18 then
+        local trace = strip( debugstack(2))
+        utils:dbgPrint( trace, CURRENTLY_RUNNING_THREAD.TH_UNIQUE_ID )
+    end
+
     H = CURRENTLY_RUNNING_THREAD
     H[TH_RESUMPTIONS] = H[TH_RESUMPTIONS] + 1
 end
@@ -568,6 +578,7 @@ function thread:getExitData( thread_h )
         errorMsg = formatErrorMsg( utils:dbgPrefix(),  L["THREAD_HANDLE_NIL"], fname )
         return nil, errorMsg
     end
+    assert( #thread_h == 18, "thread_h size wrong.")
     local isValid, errorMsg = handleIsValid( thread_h )
     if not isValid then
         errorMsg = formatErrorMsg( utils:dbgPrefix(),  L["THREAD_HANDLE_INVALID"], fname )
@@ -1020,7 +1031,8 @@ function thread:getSignal()
 
     local H  = CURRENTLY_RUNNING_THREAD
 	if H == nil then
-		errorMsg = utils:formatErrorMsg( utils:dbgPrefix(),L["THREAD_HANDLE_NIL"], fname )
+		errorMsg = formatErrorMsg( utils:dbgPrefix(),L["THREAD_HANDLE_NIL"], fname )
+        utils:dbgPrint( errorMsg )
 		return nil, errorMsg
 	end
 
