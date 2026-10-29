@@ -7,7 +7,7 @@ local ADDON_NAME, ns = ...
 ns.UtilsLib = ns.UtilsLib or {}
 
 local utils = ns.UtilsLib
-local L = ns.Locales
+local L = ns.Locales.L
 
 
 -- =================================================
@@ -168,30 +168,27 @@ function utils:postMsg( msg )
     end
 
     if msg == nil then
-        local stackTrace = debugstack(2)
-        stackTrace = utils:simplifyStackTrace( stackTrace )
-        msg = string.format("%s - Stack Trace:\n%s\n", L["PARAMETER_NIL"], stackTrace )
+        local trace = utils:strip( debugstack(2))
+        msg = string.format("%s - %s:\n%s\n", trace, L["PARAMETER_NIL"] )
         error( "Error: Program Stopped")
     end
 	infoNotificationFrame.Text:Insert( msg )
 	infoNotificationFrame:Show()
 end
-function utils:postResult( result )
-    if result == nil then error( "Input 'result' was nil!") end
-    if type(result) ~= 'table' then error( "Input 'result' not a table") end
-
-    if resultNotificationFrame == nil then
-        resultNotificationFrame = createMsgFrame( "Results" )
-    end
-        
-    local resultStr = string.format( "\n%s\nStack Trace:%s\n", result[1], result[2])
-	if infoNotificationFrame then infoNotificationFrame.Text:Insert( resultStr ) end
-	if infoNotificationFrame then infoNotificationFrame:Show()end
-end
 
 --======================================================================
 --                          DEBUG UTILITIES
 -- =====================================================================
+function utils:signalHelper(sigEntry)
+    return sigEntry[1], sigEntry[2], sigEntry[3]
+end
+
+function utils:strip(trace)
+    trace = trace:gsub("^.*[/\\]", "")
+    trace = trace:gsub("^(.-:%d+):%s*", "%1 - ")
+    return trace
+end
+
 function utils:simplifyStackTrace(stackTrace)
     local addonName = string.match(stackTrace, "AddOns/([^/]+)")
     local subDirs = string.match(stackTrace, "AddOns/[^/]+/(.-)/[^/]+%.lua")
