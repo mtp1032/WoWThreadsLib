@@ -18,7 +18,7 @@ local L = setmetatable({}, { __index = function(t, k)
 	return v
 end })
 ns.Locales.L = L
-local L = ns.Locales
+local L = ns.Locales.L
 
 local _, localizedVersion, expansionName = core:getLibInfo()
 local LOCALE = GetLocale()
