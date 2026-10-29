@@ -104,7 +104,7 @@ local function OnEvent(self, event, ...)
     local ADDON_NAME = select(1, ...)
     local addonName = ADDON_NAME
     if event == "ADDON_LOADED" and ADDON_NAME == addonName then
-		 print( L["ADDON_LOADED_MSG"] )
+		DEFAULT_CHAT_FRAME:AddMessage( L["ADDON_LOADED_MSG"], 0,1,1 )
         eventFrame:UnregisterEvent("ADDON_LOADED")
         thread:mgmtBootstrap()
     end
