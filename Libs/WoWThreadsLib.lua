@@ -533,12 +533,12 @@ Usage:
 @End]]
 function thread:yield()
     if #CURRENTLY_RUNNING_THREAD ~= 18 then
-        local trace = strip( debugstack(2))
+        local trace = utils:strip( debugstack(2))
         utils:dbgPrint( trace, CURRENTLY_RUNNING_THREAD.TH_UNIQUE_ID )
     end
     coroutine.yield()
     if #CURRENTLY_RUNNING_THREAD ~= 18 then
-        local trace = strip( debugstack(2))
+        local trace = utils:strip( debugstack(2))
         utils:dbgPrint( trace, CURRENTLY_RUNNING_THREAD.TH_UNIQUE_ID )
     end
 
