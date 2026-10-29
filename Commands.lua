@@ -14,10 +14,10 @@ local utils = ns.UtilsLib
 local L     = ns.Locales
 
 -- Import WoWThreadsLib
-local gitVersion = core:getLibInfo()
-local thread = LibStub("WoWThreadsLib", gitVersion)
+local _, localizedVersion = core:getLibInfo()
+local thread = LibStub("WoWThreadsLib", localizedVersion )
 if not thread then
-    error(L["THREAD_LIB_NOT_FOUND"])
+    error( L["THREAD_LIB_NOT_FOUND"] )
 end
 
 ---------------------------------------------------------------------
