@@ -1,7 +1,7 @@
 # WoWThreadsLib 
-Version 1.1.2 
+Version 0.3.0 
 
-A lightweight, embeddable coroutine-based threading library for World of Warcraft addons. WoWThreadsLib is the **embedded-library counterpart** to the standalone **WoWThreads** addon. Both projects expose the same public API and threading semantics, but WoWThreadsLib is designed specifically for addon developers who want to embed a pure coroutine/threading engine directly into their own addons without shipping the full standalone addon.
+WoWThreadsLib is a lightweight, embeddable coroutine-based threading library for World of Warcraft addons. WoWThreadsLib is the **embedded-library counterpart** to the standalone **WoWThreads** addon. Both projects expose the same public API and threading semantics, but WoWThreadsLib is designed specifically for addon developers who want to embed a pure coroutine/threading engine directly into their own addons without shipping the full standalone addon.
 
 For information about the standalone addon, its UI features, and player-facing functionality, see the **WoWThreads README** in the main WoWThreads repository, https://github.com/mtp1032/WoWThreadsLib
 
@@ -20,14 +20,24 @@ The library is intentionally minimal:
 - Deterministic coroutine scheduling  
 - Thread creation and lifecycle management  
 - Sleep/wakeup semantics  
-- Signal queue and inter-thread communication  
-- Addon-aware thread attribution  
-- Identical API surface to the standalone WoWThreads addon  
+- POSIX-like exit and join semantics
+- Queue-based interthread message passing.
 - Lightweight footprint suitable for embedding  
-- Distributed via LibStub under a distinct library name (e.g., `"WoWThreadsLib"`)
+- Distributed via LibStub under the library name (e.g., `"WoWThreadsLib"`)
 
 ---
 ## Installation (Embedding in Your Addon)
-1. Copy the `WoWThreadsLib` directory into your addon’s `Libs/` folder.
-2. Ensure `LibStub.lua` is present in your addon (either your own copy or the one included here).
+1. Unzip the compressed `WoWThreadsLib` directly into your addon’s `Libs/` folder.
+2. Ensure `LibStub.lua` is present in your addon (either your own copy or the one included in the WoWThreadsLib package).
 3. Add the following lines to your addon’s `.toc` file:
+
+### The library's Lua files
+```Libs\LibStub\LibStub.lua
+Libs\Core.lua
+Libs\Locales.lua
+Libs\PostMessages.lua
+Libs\UtilsLib.lua
+Libs\SignalQueue.lua
+Libs\WoWThreadsLib.lua 
+Libs\GlobalAuditor.lua```
+
