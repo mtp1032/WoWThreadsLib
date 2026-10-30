@@ -28,10 +28,6 @@ local SIG_CREATE_THREAD     = thread.SIG_CREATE_THREAD
 local SIG_TERMINATE         = thread.SIG_TERMINATE
 local SIG_NONE_PENDING      = thread.SIG_NONE_PENDING
 
-local function signalHelper(sigEntry)
-    return sigEntry[1], sigEntry[2], sigEntry[3]
-end
-
 function report:getReporterHandle()
     local reporter_h = nil
     local errorMsg = nil
@@ -66,7 +62,7 @@ local function reportData()
     while not DONE do
         local sigEntry, errorMsg = thread:getSignal()
         assert( sigEntry, errorMsg )
-        local signal, sender_h, testInfo = signalHelper( sigEntry )
+        local signal, sender_h, testInfo = utils:signalHelper( sigEntry )
 
         if signal == SIG_CONDITION_MET then
             if testInfo then                
