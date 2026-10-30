@@ -11,7 +11,7 @@ WoWThreads challenges this assumption. Built on top of Lua’s coroutine mechani
 The defining feature of WoWThreads is its ability to support runtime‑programmable concurrency. Unlike static addon initialization, WoWThreads allows threads to receive new behavior while running. A thread may complete its current task, notify a controller via SIG_COMPLETE, and immediately receive a new function to execute via SIG_START. This function can be transmitted as part of the signal payload:
 
 lua
-local sig, sender, payload = signalHelper(sigEntry)
+local sig, sender, payload = utils:signalHelper(sigEntry)
 local fn = payload.fn
 local args = payload.args
 
