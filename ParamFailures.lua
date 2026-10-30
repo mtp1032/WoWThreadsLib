@@ -34,10 +34,6 @@ local L         = ns.Locales
 -- local thread handles
 local collector_h = collect:getCollectorHandle() -- to be wired in later
 
-local function signalHelper(sigEntry)
-    return sigEntry[1], sigEntry[2], sigEntry[3]
-end
-
 -- Unit Tests
 
 local function unitTestOne()
@@ -46,12 +42,12 @@ local function unitTestOne()
     return
 end
 local function unitTestTwo()
-    local dummy_h, errorMsg = thread:create( 50, "signalHelper")
+    local dummy_h, errorMsg = thread:create( 50, invalidSignal)
     if not dummy_h then error( errorMsg ) end
 
 end
 local function unitTestThree() -- Invalid parameter type
-    local dummy_h, errorMsg = thread:create( "50", signalHelper)
+    local dummy_h, errorMsg = thread:create( "50", invalidSignal)
     if not dummy_h then error( errorMsg ) end
 end
 local function testWrapper()
@@ -69,7 +65,7 @@ local function testWrapper()
         local sigEntry, errorMsg = thread:getSignal()
         assert(sigEntry, errorMsg)
 
-        local signal, sender_h, payload = signalHelper( sigEntry )
+        local signal, sender_h, payload = utils:signalHelper( sigEntry )
         if signal == SIG_TERMINATE then 
             thread:exit( "Hello world")
         end
