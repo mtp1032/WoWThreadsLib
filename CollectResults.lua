@@ -28,10 +28,6 @@ local SIG_CREATE_THREAD     = thread.SIG_CREATE_THREAD
 local SIG_TERMINATE         = thread.SIG_TERMINATE
 local SIG_NONE_PENDING      = thread.SIG_NONE_PENDING
 
-local function signalHelper(sigEntry)
-    return sigEntry[1], sigEntry[2], sigEntry[3]
-end
-
 local testResults = {}
 
 -- NOTE: the framework tests for failed outcomes. Therefore, a failed
@@ -69,7 +65,7 @@ local function collectData()
         local sigEntry, errorMsg = thread:getSignal()
         assert( sigEntry, errorMsg )
 
-        local signal, sender_h, resultsTable = signalHelper( sigEntry )
+        local signal, sender_h, resultsTable = utils:signalHelper( sigEntry )
         if signal == SIG_COMPLETE then
             assert( resultsTable ~= nil, "resultsTable was nil")
             assert( type(resultsTable == "table", "INVALID DATA TYPE"))
@@ -101,12 +97,9 @@ eventFrame:RegisterEvent("ADDON_LOADED")
 eventFrame:RegisterEvent("PLAYER_LOGIN")
 
 local function OnEvent(self, event, ...)
-    local ADDON_NAME = select(1, ...)
-    local addonName = ADDON_NAME
-    if event == "ADDON_LOADED" and ADDON_NAME == addonName then
+    if event == "ADDON_LOADED" and ADDON_NAME =="WoWThreadsLib" then
 		DEFAULT_CHAT_FRAME:AddMessage( L["ADDON_LOADED_MSG"], 0,1,1 )
         eventFrame:UnregisterEvent("ADDON_LOADED")
-        thread:mgmtBootstrap()
     end
 
     if event == "PLAYER_LOGIN" then
