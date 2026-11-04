@@ -13,10 +13,12 @@ Libs\Core.lua
 Libs\Locales.lua
 Libs\PostMessages.lua
 Libs\UtilsLib.lua
-Libs\SignalQueue.lua
+##Libs\SignalQueue.lua
 Libs\WoWThreadsLib.lua 
 Libs\GlobalAuditor.lua
 
 ReportResults.lua
 CollectResults.lua
-TestThreadExit.lua
+##TestThreadExit.lua
+##ParamFailures.lua
+TestSignalsOne-v2.lua
