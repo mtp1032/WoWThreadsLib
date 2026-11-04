@@ -147,11 +147,14 @@ local function createMsgFrame(title)
     createTextDisplay(f)
     createResizeButton(f)
     createSelectButton(f,"BOTTOMRIGHT",f, 5, 5)
+    createClearButton(f,"BOTTOM",f, 5, 5)
     createReloadButton(f,"BOTTOMLEFT", f, 5, 5)
     return f
 end
 
-local infoNotificationFrame = createMsgFrame( "User Messages")
+local frameTitle = string.format("%s User Messages:", L["ADDON_LOADED_MSG"])
+
+local infoNotificationFrame = createMsgFrame( frameTitle )
 function post:message( msg )
 	infoNotificationFrame.Text:Insert( msg )
 	infoNotificationFrame:Show()
