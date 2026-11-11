@@ -27,55 +27,69 @@ local collect   = ns.CollectResults
 local post      = ns.PostMessages
 local L         = ns.Locales
 
-local testOne_h = nil
-local testWrapper_h = nil
+local main_h = nil
+local sender_h = nil
+local receiver_h = nil
 -- Unit Tests
-local function threadExitOne()
+
+-- send a 
+local function sender()
     local DONE = false
-    local sigEntry = nil
-    local errorMsg = nil
-    local signal = nil
-
-    local threadId, errorMsg = thread:getId()
-    assert(threadId, errorMsg )
-
     while not DONE do
         thread:yield()
-        sigEntry, errorMsg = thread:getSignal()
-        assert( sigEntry, errorMessage )
-        local signal = utils:signalHelper( sigEntry )
+        local signal, sender_h, errorMsg, sigData = thread:getSignal()
+        assert( signal, errorMsg )
 
         if signal == SIG_TERMINATE then
-            thread:exit( "Hello World", "Goodbye", "good riddance")
-            assert( false, "SHOULD NOT BE HERE!")
+            thread:exit("Goodbye from sender")
         end
     end
 end
-
-local function testWrapper()
+-- Receives the SIG_TERMINATE signal from sender and then sends a SIG_COMPLETE signal to main_h.
+local function receiver()
     local DONE = false
-    local wasSent = nil
-    local errorMsg = nil
-    local sigEntry = nil
+    while not DONE do
+        thread:yield()
+        local signal, sender_h,errorMsg, sigData = thread:getSignal()
+        assert( signal, errorMsg )
 
+        if signal == SIG_TERMINATE then
+            local wasSent, errorMsg = thread:sendSignal(main_h, SIG_COMPLETE, sender_h)
+            assert( wasSent, errorMsg )
+            thread:exit("Goodbye from receiver")
+        end
+        DONE = true
+
+    end
+
+end
+
+-- creates the two tests that will execute the sender function and then terminate it
+local function main()
+    local DONE = false
+
+    sender_h, errorMsg = thread:create(50, sender )
+    assert( testExitOne_h, errorMsg )
+
+    receiver_h, errorMsg = thread:create(50, receiver )
+    assert( receiver_h, errorMsg )
 
     while not DONE do
-        wasSent, errorMsg = thread:sendSignal( testOne_h, SIG_TERMINATE )
-        assert( wasSent, errorMsg )
         thread:yield()
-        
-        -- get the data from the terminated testOne_h
-        local exitData = {thread:getExitData( testOne_h )}
-        assert( exitData, "thread:getExitData() failed")
-        post:message( string.format("thread:getExitData() - %s, %s, %s\n", exitData[1], exitData[2], exitData[3]))
+        signal, errorMsg, sigData = thread:getSignal()
+        assert( signal, errorMessage )
+
+        if signal == SIG_TERMINATE then
+            DONE = true
+        end
     end
 end
-local function main()
-    testWrapper_h, errorMsg = thread:create(50, testWrapper)
-    assert( testWrapper_h, errorMsg )
+local function startTest()
+    local errorMsg = nil
 
-    testOne_h, errorMsg = thread:create(30, threadExitOne )
-    assert( testOne_h, errorMsg )
+    main_h, errorMsg = thread:create(50, main )
+    assert( main_h, errorMsg )
 
 end
-main()
+
+startTest()
