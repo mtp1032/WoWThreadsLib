@@ -29,21 +29,21 @@ if LOCALE == "enUS" then
 	
     -- Thread Errors                          Thread-specific messages
 	L["INVALID_TYPE"]				= "Uknown or unexpected data type. "
-    L["FUNCTION_ARG_NILL"]  		= "Function Parameter nil. "
+    L["PARAMETER_NIL"]  		    = "Function Parameter nil. "
 	L["INVALID_OPERATION"]			= "Operation not permitted. "
+    L["NOT_A_THREAD"]               = "Caller is not a thread. "
 	L["THREAD_HANDLE_NIL"] 		    = "Thread handle was nil. "
-	L["THREAD_NO_COROUTINE"]        = "Ill-formed thread handle. Does not reference a coroutine. "
-    L["NO_THREAD_CONTEXT"]          = "Operation failed. Caller is not a thread. "
-	L["THREAD_HANDLE_INVALID"]	    = "Ill-formed thread handle. "
+	L["THREAD_COROUTINE_NIL"]        = "Thread's coroutine is nil. "
+	L["THREAD_HANDLE_CORRUPTED"]	= "Corrupted thread handle. "
     L["THREAD_NOT_COMPLETED"]       = "Thread has not yet completed. "
     L["THREAD_NOT_FOUND"]           = "Thread handle not found. "
     L["THREAD_LIB_NOT_FOUND"]       = "WoW Threads Library not found. "
-    L["THREAD_IS_DEAD"]             = "He's dead, Jim. "
+    L["THREAD_IS_DEAD"]             = "It's dead, Jim. "
 
-
-    -- Signal failure
-	L["SIGNAL_OUT_OF_RANGE"]	    = "Signal is out of range "
-    L["SIGNAL_IS_NIL"]	            = "Signal is nil "
-    L["SIGNAL_INVALID_TYPE"]        = "Signal type is invalid. Expected number, got "
-    L["SIGNAL_INVALID_OPERATION"]   = "SIG_NONE_PENDING can not be sent "
+    -- Signal failures
+	L["SIGNAL_OUT_OF_RANGE"]	    = "Signal is out of range. "
+    L["SIGNAL_UKNOWN"]              = "Signal does not match WoWThread's signals."
+    L["SIGNAL_IS_NIL"]	            = "Signal is nil. "
+    L["SIGNAL_INVALID_TYPE"]        = "Signal type is invalid. "
+    L["SIG_NONE_PENDING"]           = "SIG_NONE_PENDING can not be used. "
 end
