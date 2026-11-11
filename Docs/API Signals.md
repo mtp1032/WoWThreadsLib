@@ -9,7 +9,7 @@ TH_COROUTINE -- the coroutine that executes a function.
 TH_COROUTINE_ARGS -- Parameters passed to the coroutine
 TH_UNIQUE_ID -- a unique, numerical identifier
 TH_SIGNAL_QUEUE -- a FIFO queue containing all of the thread's pending ending signals
-TH_YIELD_INTERVAL --The time, in frame tics, the thread suspends itself when yielding the processor. On a 60 FPS machine, this is approximately 16.67 milliseconds.
+TH_TICS_PER_YIELD_INTERVAL --The time, in frame tics, the thread suspends itself when yielding the processor. On a 60 FPS machine, this is approximately 16.67 milliseconds.
 ```
 ### Signature:
     value, errorMsg = thread:sendSignal( target_h, signalValue [,...] )
