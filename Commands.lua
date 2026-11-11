@@ -4,72 +4,72 @@
 -- Date: October, 2026
 --=================================================================================
 local ADDON_NAME, ns = ...
-
 ns.Commands = ns.Commands or {}
-local params = ns.ParamFailures
-local core  = ns.Core
+
+-- local core = ns.Core
 local post  = ns.PostMessages
-local sig   = ns.SignalQueue
-local utils = ns.UtilsLib
-local L     = ns.Locales
+local TestSignals = ns.TestSignalOne
+-- local utils = ns.UtilsLib
+-- local L     = ns.Locales.L
 
--- Import WoWThreadsLib
-local _, localizedVersion = core:getLibInfo()
-local thread = LibStub("WoWThreadsLib", localizedVersion )
-if not thread then
-    error( L["THREAD_LIB_NOT_FOUND"] )
-end
+local Commands = {}
 
----------------------------------------------------------------------
--- Command dispatch table
--- Add new test commands here as you build more test modules.
----------------------------------------------------------------------
-local dispatch = {
-    ["main"] = function()
-        -- Example: run the ParamFailures test module
-        -- This assumes ns.ParamFailures.main exists and starts a test thread.
-        if ns.ParamFailures and ns.ParamFailures.main then
-            ns.ParamFailures.main()
-        else
-            post:message("ParamFailures.main() not found")
-        end
-    end,
-
-    ["ping"] = function()
-        post:message("WoWThreadsLib test command interface is alive.")
-    end,
-
-    ["help"] = function()
-        post:message("WoWThreadsLib Test Commands:")
-        post:message("  /wuts main   - run main ParamFailures tests")
-        post:message("  /wuts ping   - simple connectivity test")
-        post:message("  /wuts help   - show this help")
-    end,
+local TEST_SUITES =
+{
+    ParamFailures   = ParamFailures,
+    -- SignalPayloads = SignalPayloads,
+    -- ThreadSemantics = ThreadTerminations,
 }
 
----------------------------------------------------------------------
--- Command handler
----------------------------------------------------------------------
-local function getCommand(msg)
-    msg = msg:lower():trim()
+local function printHelp()
 
-    if msg == "" then
-        dispatch["help"]()
+    post:message( string.format("/wowtest <suite>\n"))
+    post:message( string.format("/wowtest all\n"))
+    post:message( string.format("\n"))
+    post:message( string.format("Available suites:\n"))
+
+    for suiteName in pairs(TEST_SUITES) do
+        post:message( string.format("  %s\n", suiteName))
+    end
+end
+
+function Commands:run(msg)
+
+    local suiteName = strtrim(msg or "")
+
+    if suiteName == "" then
+        printHelp()
         return
     end
 
-    local fn = dispatch[msg]
-    if fn then
-        fn()
-    else
-        post:message("Unknown test command: " .. msg)
-        dispatch["help"]()
+    if suiteName == "all" then
+
+        for _, suite in pairs(TEST_SUITES) do
+            suite:startTests()
+        end
+
+        return
     end
+
+    local suite = TEST_SUITES[suiteName]
+
+    if not suite then
+        post:message(string.format(
+            "Unknown test suite '%s'\n",
+            suiteName
+        ))
+        printHelp()
+        return
+    end
+
+    suite:startTests()
 end
 
----------------------------------------------------------------------
--- Register Slash Commands
----------------------------------------------------------------------
-SLASH_TEST_WOWTHREADS_LIB1 = "/wuts"
-SLASH_TEST_WOWTHREADS_LIB2 = "/wowunittests"
-SlashCmdList["WOWTHREADS_LIB"] = getCommand
+SLASH_WOWTHREADTEST1 = "/wowtest"
+
+SlashCmdList["WOWTHREADTEST"] =
+    function(msg)
+        Commands:run(msg)
+    end
+
+return Commands
