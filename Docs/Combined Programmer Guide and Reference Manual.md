@@ -843,7 +843,7 @@ and a stack trace (result[2]).
 ```
 
 #### Signature:
-local equal, result = thread:areEqual( h1, h2 )
+local equal, result = thread:handlesAreEqual( h1, h2 )
 
 #### Description:
 Determines whether two thread handles are identical.
@@ -859,7 +859,7 @@ and a stack trace (result[2]).
 
 #### Usage:
 ```lua
-    local equal, result = thread:areEqual( H1, H2 )
+    local equal, result = thread:handlesAreEqual( H1, H2 )
         if equal == nil then 
             print( result) 
             return 
