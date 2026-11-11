@@ -19,16 +19,9 @@ if not thread then
     error( L["THREAD_LIB_NOT_FOUND"] )
 end
 
-local SIG_READY             = thread.SIG_READY
 local SIG_START             = thread.SIG_START
 local SIG_COMPLETE          = thread.SIG_COMPLETE
-local SIG_ALERT             = thread.SIG_ALERT
-local SIG_CONDITION_MET     = thread.SIG_CONDITION_MET
-local SIG_CREATE_THREAD     = thread.SIG_CREATE_THREAD
 local SIG_TERMINATE         = thread.SIG_TERMINATE
-local SIG_NONE_PENDING      = thread.SIG_NONE_PENDING
-
-local testResults = {}
 
 -- NOTE: the framework tests for failed outcomes. Therefore, a failed
 -- unit tests is a successful outcome. Also, the 5th element of the test
@@ -60,21 +53,26 @@ local function collectData()
 
     -- wait for test results
     while not DONE do
-        thread:yield()
-        
-        local sigEntry, errorMsg = thread:getSignal()
-        assert( sigEntry, errorMsg )
+        local DONE = false
 
-        local signal, sender_h, resultsTable = utils:signalHelper( sigEntry )
-        if signal == SIG_COMPLETE then
-            assert( resultsTable ~= nil, "resultsTable was nil")
-            assert( type(resultsTable == "table", "INVALID DATA TYPE"))
-            assert( #resultsTable == 3, "Expected 3 test string(s), got", tostring(#resultsTable))
-        end
-    
-        if resultsTable then 
-            for i = 1, #resultsTable do
-                post:message( string.format("%s\n", resultsTable[i] ))
+        while not DONE do
+            thread:yield()
+            
+            -- utils:dbgPrint()
+            local signal, sender_h, testResults = thread:getSignal()
+
+            if signal == SIG_TERMINATE then
+                return 
+            end
+
+            if signal == SIG_COMPLETE then
+                post:message( string.format("TEST RESULTS\n"))
+                utils:dbgPrint( #testResults)
+                for i = 1, #testResults do
+                    local rec = testResults[i]
+                    post:message( string.format("  %s, %s, %s\n", rec[1], rec[2], rec[3] ))
+                end
+                DONE = true
             end
         end
     end
@@ -85,10 +83,10 @@ function collect:getCollectorHandle()
     local errorMsg = nil
 
     if not collector_h then
-        collector_h, errorMsg = thread:create( 50, collectData )
+    collector_h, errorMsg = thread:create( 50, collectData )
         assert( collector_h, errorMsg )
     end
-    return collector_h
+    return collector_h, errorMsg
 end
 
 -- Event handling
