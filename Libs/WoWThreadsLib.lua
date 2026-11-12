@@ -151,7 +151,7 @@ local function dbgLog( prefix, msg )
     end
     if debuggingIsEnabled then
          local logMsg = string.format("%s %s\n", colorize(utils:dbgPrefix(), 0, 1, 0.5), msg )
-         post:message( logMsg )
+        --  post:message( logMsg )
     end
 end
 local function formatErrorMsg( prefix, errorMsg, functionName )
@@ -880,7 +880,7 @@ function thread:sendSignal( target_h, signal, ... )
     
     if target_h == nil then
         local st = debugstack(2)
-        post:message( string.format("%s\n", st ))
+        -- post:message( string.format("%s\n", st ))
         errorMsg = formatErrorMsg(utils:dbgPrefix(), L["THREAD_HANDLE_NIL"], fname )
         return false, errorMsg
     end
@@ -900,7 +900,7 @@ function thread:sendSignal( target_h, signal, ... )
     end
     if handleIsInMorgue( target_h ) then
         errorMsg = formatErrorMsg( utils:dbgPrefix(), L["THREAD_IS_DEAD"], fname )
-        post:message( string.format("%s - Thread[%d]\n%s\n", errorMsg, thread_h[TH_UNIQUE_ID], debugstack(2) ))
+        -- post:message( string.format("%s - Thread[%d]\n%s\n", errorMsg, thread_h[TH_UNIQUE_ID], debugstack(2) ))
         return false, errorMsg
     end
 
@@ -909,7 +909,6 @@ function thread:sendSignal( target_h, signal, ... )
 	local sigEntry = {signal, sender_h, packArgs(...) }
 
     table.insert( target_h[TH_PENDING_SIGNALS], sigEntry )
-    post:message( string.format("%s Pending Signals: %d\n", utils:dbgPrefix(), #target_h[TH_PENDING_SIGNALS]))
 
 	if signal == SIG_ALERT then
         target_h[TH_REMAINING_TICS] = 1
