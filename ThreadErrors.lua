@@ -50,11 +50,10 @@ local testResults = {}
 local function unitTest1()
     local tbl = nil
     local var = tbl[1]
-
+end
 local function unitTest2()
     local wasSent, errorMsg = thread:create( "tics", unitTest1 )
     assert( wasSent, errorMsg )
-end
 end
 local function unitTest3()
     local wasSent, errorMsg = thread:create( 50, func )
@@ -80,9 +79,6 @@ local function unitTest7( ... )
         error( "passArgs Succeeded.")
     end
 end
-local function unitTest8( parent_h)
-    -- test that parent_h is the parent of this thread.
-end
 
 local function unitTests(...)
     local DONE = false
@@ -91,9 +87,9 @@ local function unitTests(...)
 
     while not DONE do
         thread:yield()
---==============================================================================
---                          UNIT TEST 1
---==============================================================================
+        --==============================================================================
+        --                          UNIT TEST 1
+        --==============================================================================
         local succeeded, testResult = pcall(unitTest1)
         if not succeeded then
             local result = "PASS" 
@@ -104,7 +100,6 @@ local function unitTests(...)
             local descr = string.format("%s", testDescr )
             table.insert( testResults, {title, descr, testResult})            
         end
-
         --==============================================================================
         --                          UNIT TEST 2
         --==============================================================================
@@ -118,7 +113,6 @@ local function unitTests(...)
             local descr = string.format("%s", testDescr )
             table.insert( testResults, {title, descr, testResult})            
         end
-
         --==============================================================================
         --                          UNIT TEST 3
         --==============================================================================
@@ -132,7 +126,6 @@ local function unitTests(...)
             local descr = string.format("%s", testDescr )
             table.insert( testResults, {title, descr, testResult})            
         end
-
         --==============================================================================
         --                          UNIT TEST 4
         --==============================================================================
@@ -146,7 +139,6 @@ local function unitTests(...)
             local descr = string.format("%s", testDescr )
             table.insert( testResults, {title, descr, testResult})            
         end
-
         --==============================================================================
         --                          UNIT TEST 5
         --==============================================================================
@@ -160,7 +152,6 @@ local function unitTests(...)
             local descr = string.format("%s", testDescr )
             table.insert( testResults, {title, descr, testResult})            
         end
-
         --==============================================================================
         --                          UNIT TEST 6
         --==============================================================================
@@ -174,7 +165,6 @@ local function unitTests(...)
             local descr = string.format("%s", testDescr )
             table.insert( testResults, {title, descr, testResult})            
         end
-
 
         DONE = true 
     end
