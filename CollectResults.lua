@@ -48,6 +48,18 @@ local function formatTestResult( testResultStr )
     return formattedStr
 end
 
+local function displayResults( testResults )
+
+    post:message( string.format("==========================\n") )
+    post:message( string.format("           TEST RESULTS\n"))
+    post:message( string.format("==========================\n"))
+
+    for i = 1, #testResults do
+        local rec = testResults[i]
+        post:message( string.format("%s: %s\n%s\n\n", rec[1], rec[2], rec[3] ))
+    end
+end
+
 local function collectData()
     local DONE = false
 
@@ -58,21 +70,13 @@ local function collectData()
         while not DONE do
             thread:yield()
             
-            -- utils:dbgPrint()
             local signal, sender_h, testResults = thread:getSignal()
-
+            if signal == SIG_COMPLETE then
+                displayResults( testResults)
+                DONE = true
+            end
             if signal == SIG_TERMINATE then
                 return 
-            end
-
-            if signal == SIG_COMPLETE then
-                post:message( string.format("TEST RESULTS\n"))
-                utils:dbgPrint( #testResults)
-                for i = 1, #testResults do
-                    local rec = testResults[i]
-                    post:message( string.format("  %s, %s, %s\n", rec[1], rec[2], rec[3] ))
-                end
-                DONE = true
             end
         end
     end
