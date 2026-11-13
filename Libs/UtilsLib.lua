@@ -57,3 +57,13 @@ function utils:dbgPrint(...)
 
     print(prefix .. table.concat(args, " "))
 end
+function utils:packArgs(...)
+    return {
+        n = select("#", ...),
+        ...
+    }
+end
+function utils:unpackArgs(args)
+    return unpack(args, 1, args.n)
+end
+
