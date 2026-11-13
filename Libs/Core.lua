@@ -16,41 +16,62 @@ local localizedVersion = string.format("%d.%d.%d", MAJOR, MINOR, PATCH)
 -----------------------------------------------------------------
 -- Private functions
 -----------------------------------------------------------------
-
-local EXPANSION_NAMES = {}
-local function addExpansionName(expansionLevel, name)
-    if expansionLevel ~= nil then
-        EXPANSION_NAMES[expansionLevel] = name
-    end
-end
-
-addExpansionName(LE_EXPANSION_CLASSIC, "Classic")
-addExpansionName(LE_EXPANSION_BURNING_CRUSADE, "Burning Crusade")
-addExpansionName(LE_EXPANSION_WRATH_OF_THE_LICH_KING, "Wrath of the Lich King")
-addExpansionName(LE_EXPANSION_CATACLYSM, "Cataclysm")
-addExpansionName(LE_EXPANSION_MISTS_OF_PANDARIA, "Mists of Pandaria")
-addExpansionName(LE_EXPANSION_WARLORDS_OF_DRAENOR, "Warlords of Draenor")
-addExpansionName(LE_EXPANSION_LEGION, "Legion")
-addExpansionName(LE_EXPANSION_BATTLE_FOR_AZEROTH, "Battle for Azeroth")
-addExpansionName(LE_EXPANSION_SHADOWLANDS, "Shadowlands")
-addExpansionName(LE_EXPANSION_DRAGONFLIGHT, "Dragonflight")
-addExpansionName(LE_EXPANSION_WAR_WITHIN, "The War Within")
-addExpansionName(LE_EXPANSION_MIDNIGHT, "Midnight")
-   
------------------------------------------------------------------
--- Private functions
------------------------------------------------------------------
--- returns: numericVersion, localizedVersion, expansionName
 local function getExpansionName()
-    local expansionName = "Wow: Forever"
-    
+    -- Check for Forever / Classic level explicitly if desired, 
+    -- or let it resolve through the dynamic lookup table.
     local expansionLevel = GetExpansionLevel()
+    
     if expansionLevel == 0 then
-        return expansionName
+        -- Custom override or localized string for Forever
+        return "Wow: Forever"
     end
+
+    -- Dynamically fetch localized expansion name from global strings 
+    -- e.g., EXPANSION_NAME0, EXPANSION_NAME1, etc.
+    local globalName = _G["EXPANSION_NAME" .. expansionLevel]
+    if globalName then
+        return globalName
+    end
+
+    -- Fallback chain
     local fallbackName = select(4, GetBuildInfo())
-    return EXPANSION_NAMES[expansionLevel] or fallbackName
+    return fallbackName
 end
+
+-- local EXPANSION_NAMES = {}
+-- local function addExpansionName(expansionLevel, name)
+--     if expansionLevel ~= nil then
+--         EXPANSION_NAMES[expansionLevel] = name
+--     end
+-- end
+
+-- addExpansionName(LE_EXPANSION_CLASSIC, "Classic")
+-- addExpansionName(LE_EXPANSION_BURNING_CRUSADE, "Burning Crusade")
+-- addExpansionName(LE_EXPANSION_WRATH_OF_THE_LICH_KING, "Wrath of the Lich King")
+-- addExpansionName(LE_EXPANSION_CATACLYSM, "Cataclysm")
+-- addExpansionName(LE_EXPANSION_MISTS_OF_PANDARIA, "Mists of Pandaria")
+-- addExpansionName(LE_EXPANSION_WARLORDS_OF_DRAENOR, "Warlords of Draenor")
+-- addExpansionName(LE_EXPANSION_LEGION, "Legion")
+-- addExpansionName(LE_EXPANSION_BATTLE_FOR_AZEROTH, "Battle for Azeroth")
+-- addExpansionName(LE_EXPANSION_SHADOWLANDS, "Shadowlands")
+-- addExpansionName(LE_EXPANSION_DRAGONFLIGHT, "Dragonflight")
+-- addExpansionName(LE_EXPANSION_WAR_WITHIN, "The War Within")
+-- addExpansionName(LE_EXPANSION_MIDNIGHT, "Midnight")
+   
+-- -----------------------------------------------------------------
+-- -- Private functions
+-- -----------------------------------------------------------------
+-- -- returns: numericVersion, localizedVersion, expansionName
+-- local function getExpansionName()
+--     local expansionName = "Wow: Forever"
+    
+--     local expansionLevel = GetExpansionLevel()
+--     if expansionLevel == 0 then
+--         return expansionName
+--     end
+--     local fallbackName = select(4, GetBuildInfo())
+--     return EXPANSION_NAMES[expansionLevel] or fallbackName
+-- end
 
 -- returns: gitversion, addonName = core:getAddonInfo()
 function core:getLibInfo()
