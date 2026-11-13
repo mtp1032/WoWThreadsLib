@@ -33,12 +33,14 @@ if LOCALE == "enUS" then
 	L["INVALID_OPERATION"]			= "Operation not permitted. "
     L["NOT_A_THREAD"]               = "Caller is not a thread. "
 	L["THREAD_HANDLE_NIL"] 		    = "Thread handle was nil. "
-	L["THREAD_COROUTINE_NIL"]        = "Thread's coroutine is nil. "
-	L["THREAD_HANDLE_CORRUPTED"]	= "Corrupted thread handle. "
+	L["THREAD_COROUTINE_NIL"]       = "Thread's coroutine is nil. "
+	L["THREAD_HANDLE_MALFORMED"]	                = "Malformed thread handle."
     L["THREAD_NOT_COMPLETED"]       = "Thread has not yet completed. "
     L["THREAD_NOT_FOUND"]           = "Thread handle not found. "
     L["THREAD_LIB_NOT_FOUND"]       = "WoW Threads Library not found. "
     L["THREAD_IS_DEAD"]             = "It's dead, Jim. "
+    L["THREAD_IS_SLEEPING"]         = "Thread is sleeping and cannont be signaled. "
+    L["SLEEP_TABLE_EMPTY"]          = "Sleep table is empty. "
 
     -- Signal failures
 	L["SIGNAL_OUT_OF_RANGE"]	    = "Signal is out of range. "
