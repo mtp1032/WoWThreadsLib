@@ -2,7 +2,8 @@
 ## Title: WoWThreadsLib
 ## Notes: Embedded coroutine-based threading library for World of Warcraft addons.
 ## Author: Michael T. Peterson
-## X-Category: Development Tools
+## Category: Development Tools
+## IconTexture: 3528459
 ## X-Website: https://github.com/mtp1032/WoWThreadsLib
 ## X-Source-URL: https://github.com/mtp1032/WoWThreadsLib
 
@@ -21,4 +22,4 @@ ReportResults.lua
 CollectResults.lua
 ##TestSignalsOne.lua
 ##SignalPayloads.lua
-ThreadErrors.lua
+SleepAwake.lua
