@@ -776,25 +776,23 @@ thread:sleep()
 
 #### Description:
 Suspends the calling thread for an indeterminate amount of time.
-Note, unlike thread:yield(), this call doesn't  return until awakened by receipt 
-of a SIG_WAKEUP signal. Note, thread:sleep() is always fatal if the caller is not
-a thread.
+Unlike thread:yield(), this call doesn't return until another thread awakens it
+with thread:wakeup(thread_h). Note, thread:sleep() is always fatal if the caller
+is not a thread.
 
 #### Parameters:
 - None
 
 #### Returns:
-- Success: the thread's handle is returned when it regains the processor (i.e., after 
-it is resumed), and the result parameter is set to nil.
-- Failure: the handle is false and the result parameter contains an error message. This situation arises
-when the target thread is not in the thread sleep queue.
+- Success: true, nil after the thread is awakened and resumes.
+- Failure: false and an error message if the thread could not be put to sleep.
 
 #### Usage:
 ```lua
-    local thread_h, result = thread:sleep()
-        if thread_h == false then                 -- the thread was never put to sleep. 
-            print( result[1], result[2])
-        end
+    local success, result = thread:sleep()
+    if not success then
+        print(result)
+    end
 ```
 
 #### Signature:
