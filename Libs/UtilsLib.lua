@@ -59,11 +59,40 @@ function utils:dbgPrint(...)
 end
 function utils:packArgs(...)
     return {
-        n = select("#", ...),
-        ...
+        n = select("#", ...), ...
     }
 end
 function utils:unpackArgs(args)
+
+    assert(
+        type(args) == "table",
+        string.format(
+            "unpackArgs() expected table, got %s (%s)",
+            type(args),
+            tostring(args)
+        )
+    )
+
+    assert(
+        args.n ~= nil,
+        "unpackArgs(): missing n field"
+    )
+
     return unpack(args, 1, args.n)
 end
 
+function utils:copyPackedArgs(args)
+
+    assert(type(args) == "table",
+        "copyPackedArgs(): expected packed args table")
+
+    local copy = {
+        n = args.n
+    }
+
+    for i = 1, args.n do
+        copy[i] = args[i]
+    end
+
+    return copy
+end
