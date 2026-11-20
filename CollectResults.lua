@@ -23,31 +23,6 @@ local SIG_START             = thread.SIG_START
 local SIG_COMPLETE          = thread.SIG_COMPLETE
 local SIG_TERMINATE         = thread.SIG_TERMINATE
 
--- NOTE: the framework tests for failed outcomes. Therefore, a failed
--- unit tests is a successful outcome. Also, the 5th element of the test
--- string (testResultStr), is the error message returned by pcall. Since
--- error messages do not appear on successful tests, their result string
--- only 4 elements. 
---      "%s|%s|%s|%s" - 3 elements if test failed successfully
---      "%s|%s|%s" - 3 elements if passed (no error message) 
-local function parseTestResult( testResultStr )
-
-    -- Capture every chunk between pipe characters
-    local fields = {}
-    for field in str:gmatch("[^|]+") do
-        table.insert(fields, field)
-    end
-    return fields[1], fields[2], fields[3], fields[4], fields[5]
-
-end
-
-local function formatTestResult( testResultStr )
-    local t = {parseTestResult( testResultStr )}
-
-    local formattedStr = string.format("%s,%s,%s,%s\n",t[1], t[2], t[3], t[4], t[5] )
-    return formattedStr
-end
-
 local function displayResults( testResults )
 
     post:message( string.format("==========================\n") )
