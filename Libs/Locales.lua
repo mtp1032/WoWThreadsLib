@@ -31,7 +31,7 @@ if LOCALE == "enUS" then
 	L["INVALID_TYPE"]				= "Uknown or unexpected data type. "
     L["PARAMETER_NIL"]  		    = "Function Parameter nil. "
 	L["INVALID_OPERATION"]			= "Operation not permitted. "
-    L["NOT_A_THREAD"]               = "Caller is not a thread. "
+    L["NOT_A_THREAD"]               = "Caller not a thread, but the game client, WoW.exe. "
 	L["THREAD_HANDLE_NIL"] 		    = "Thread handle was nil. "
 	L["THREAD_COROUTINE_NIL"]       = "Thread's coroutine is nil. "
 	L["THREAD_HANDLE_MALFORMED"]	                = "Malformed thread handle."
