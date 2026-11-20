@@ -1,5 +1,5 @@
 # WoWThreadsLib 
-Version 0.8.1
+Version 0.8.2
 
 WoWThreadsLib is a lightweight, embeddable coroutine-based threading library for World of Warcraft addons. WoWThreadsLib is the **embedded-library counterpart** to the standalone **WoWThreads** addon. Both projects expose the same public API and threading semantics, but WoWThreadsLib is designed specifically for addon developers who want to embed a pure coroutine/threading engine directly into their own addons without shipping the full standalone addon.
 
@@ -15,11 +15,11 @@ The library is intentionally minimal:
 - No standalone addon state  
 ---
 ## Features
-- Deterministic coroutine scheduling  
+- Asynchronous coroutine scheduling  
 - Thread creation and lifecycle management  
-- Sleep/wakeup sand delay emantics  
+- Sleep/wakeup and delay emantics  
 - POSIX-like exit and join semantics
-- Queue-based interthread message passing.
+- Signal-based interthread message passing.
 - Lightweight footprint suitable for embedding  
 - Distributed via LibStub under the library name (e.g., `"WoWThreadsLib"`)
 
