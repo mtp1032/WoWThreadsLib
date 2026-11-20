@@ -18,3 +18,5 @@
   - Skipped this version. Found a number of bugs having to do with my use of xpcall that ended up making changes everywhere. So, I backed up to 0.6.0 and fixed the bugs in that repo.
  # Version 0.8.1
  - This version is no longer crippled by the boundary condtions of xpcall. I'll be working on the test harness that will automate all of the tests. Each test completion will be a patch upgrade. At 0.9.0 we'll enter in to performance evaluation and doc preparation.
+# Version 0.9.2
+- Extensive changes to the main module, WoWThreadsLib.lua. Made thread handle validation failures fatal to the executing thread. Am now in the process of adding thread termination semantics, which turns out to be more complicated that I had first envisioned. Once this is done, the code will be ready for Beta.
