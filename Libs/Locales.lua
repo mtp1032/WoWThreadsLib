@@ -41,7 +41,9 @@ if LOCALE == "enUS" then
     L["THREAD_IS_DEAD"]             = "It's dead, Jim. "
     L["THREAD_IS_SLEEPING"]         = "Thread is sleeping and cannont be signaled. "
     L["SLEEP_TABLE_EMPTY"]          = "Sleep table is empty. "
-
+    L["THREAD_EXIT_NORMAL"]         = "Thread exited normally. "
+    L["THREAD_EXIT_ERROR"]          = "Thread exited with error. "
+    L["THREAD_EXIT_STATUS_UNKNOWN"] = "Thread exit status unknown. "
     -- Signal failures
 	L["SIGNAL_OUT_OF_RANGE"]	    = "Signal is out of range. "
     L["SIGNAL_UKNOWN"]              = "Signal does not match WoWThread's signals."
