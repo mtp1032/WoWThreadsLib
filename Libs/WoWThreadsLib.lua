@@ -51,11 +51,9 @@ local TH_THREAD_PARENT      = 9
 local TH_EXECUTION_STATE    = 10 -- "suspended", "dead"
 local TH_TIME_CREATED       = 11 -- timestamped from debugprofilestop()
 local TH_TIME_COMPLETED     = 12 -- timestamped from debugprofilestop()
-local TH_EXIT_DATA          = 13 -- data (varargs) saved when thread:exit() is called
-local TH_EXIT_STATUS        = 14 -- contains "normal" or "abnormal" exit
-local TH_DEBUG_INFO         = 15
-local TH_RETURN_VALUES      = 16 -- contain normal function return values
-local TH_COROUTINE_ERROR    = 17
+local TH_DEBUG_INFO         = 13
+local TH_COMPLETION_DATA    = 14 -- contain normal function return values
+local TH_COROUTINE_ERROR    = 15
 local TH_NUM_HANDLE_ELEMENTS = TH_COROUTINE_ERROR
 
 
@@ -154,8 +152,7 @@ local function dbgLog( prefix, msg )
     post:message( logMsg )
 end
 local function formatErrorMsg( prefix, errorMsg, functionName )
-    -- local errorMsg = string.format("Error in %s (see %s) in %s -- %s \n", functionName, colorize( prefix, 0, 1, 0), errorMsg)
-        local errorMsg = string.format("Error in %s (%s) - %s \n", functionName, prefix , errorMsg)
+    local errorMsg = string.format("Error in %s (%s) - %s \n", functionName, prefix , errorMsg)
     return errorMsg
 end
 
@@ -203,32 +200,7 @@ local function threadIsInMorgue( thread_h )
     end
 	return false
 end
-local function wakeupThread(thread_h )
 
-    if H == nil then
-        error("Input handle was nil ")
-        return nil, L["THREAD_HANDLE_NIL"]
-    end
-
-    if #sleepTable == 0 then 
-        local errorMsg = "Sleep Table Empty."
-        error( errorMsg)
-        return false, errorMsg 
-    end
-
-    for i = 1, #sleepTable do
-        local entry = sleepTable[i]
-        validate( entry )
-        if entry[TH_UNIQUE_ID] == thread_h[TH_UNIQUE_ID] then
-            table.remove( sleepTable, i ) 
-            table.insert( threadControlBlock, entry )   
-            local logMsg = string.format("Thread[%d] moved from sleep table into thread control block.", thread_h[TH_UNIQUE_ID])	
-            dbgLog( utils:dbgPrefix(), logMsg )
-            return true, nil      
-        end
-    end
-    return false, L["THREAD_NOT_FOUND"]
-end
 local function createHandle( yieldInterval, func, ...)
 
     if yieldInterval < DEFAULT_YIELD_TICS then
@@ -252,8 +224,6 @@ local function createHandle( yieldInterval, func, ...)
         [TH_EXECUTION_STATE]    = "suspended",
         [TH_TIME_CREATED]       = debugprofilestop(),
         [TH_TIME_COMPLETED]     = 0,
-        [TH_EXIT_DATA]          = nil,
-        [TH_EXIT_STATUS]        = SUCCESSFUL, -- contains true (normal return) or false (abnormal or error return)
         [TH_COROUTINE_ERROR]    = nil,
         [TH_DEBUG_INFO] = {
             startupArgs = utils:copyPackedArgs( packedArgs ),
@@ -303,14 +273,14 @@ end
 -- processCompletionResults()
 -- Interprets the raw completion results captured from the final
 -- coroutine.resume() and derives an exit classification.
--- H[TH_RETURN_VALUES] contains:
+-- H[TH_COMPLETION_DATA] contains:
 --      { true,  ...returns... }
 -- or
 --      { false, errorMessage }
 ---------------------------------------------------------------
 local function completionStatus(H)
 
-    local raw = H[TH_RETURN_VALUES]
+    local raw = H[TH_COMPLETION_DATA]
     if not raw then
         return nil
     end
@@ -323,7 +293,7 @@ local function completionError(H)
 
     assert(H)
 
-    local raw = H[TH_RETURN_VALUES]
+    local raw = H[TH_COMPLETION_DATA]
 
     if not raw then
         return nil
@@ -336,7 +306,7 @@ local function completionError(H)
     return raw[2]
 end
 local function completionValues(H)
-    local raw = H[TH_RETURN_VALUES]
+    local raw = H[TH_COMPLETION_DATA]
     if not raw then
         return nil
     end
@@ -355,7 +325,7 @@ local function resumeThread(H)
 
     -- Resume coroutine
     RESUMING_THREAD = H
-    H[TH_RETURN_VALUES] = utils:packArgs(
+    H[TH_COMPLETION_DATA] = utils:packArgs(
         coroutine.resume( co, utils:unpackArgs(H[TH_COROUTINE_ARGS])))
 
     RESUMING_THREAD = nil
@@ -481,72 +451,6 @@ function thread:yield()
     coroutine.yield()
 end
 
---[[ 
--- a helpful function to store the exit data in the calling thread's handle
-function storeData(...)
-    H = RESUMING_THREAD
-    local exitData = H[TH_EXIT_DATA]
-    exitData = { n = select("#", ...)
-end
--- a helpful function to retrieve the exit data from the calling thread's handle
-function getData(index)
-    local t = values[index]
-    return unpack(t, 1, t.n)
-end
-
-]]
---[[ 
-### :
-    thread:exit(...)
-#### Description:
-    Terminates the calling thread and stores the specified varargs in the calling
-    thread's handle. The stored data can be retrieved by the parent thread using
-    thread:getExitData(thread_h). Note that thread:exit() is always fatal if the
-    caller is NOT a thread.
-#### Parameters:
-    - ... (varargs, optional)
-        Any number of values to be stored in the calling thread's handle. These
-        values can be retrieved by the parent thread using thread:getExitData(thread_h).
-        thread:exit() does not return to the calling thread. Instead, it terminates the 
-        thread immediately.
-#### Returns:
-    - None, this function never returns to the calling thread. The thread is terminated immediately.
-
-#### Usage Example:
-    thread:exit("Thread completed successfully", 42, {1, 2, 3})
-]]
-function thread:exit(...)
-    validateHandle( RESUMING_THREAD )
-    local thread_h = RESUMING_THREAD
-
-    -- store the data in the calling thread's handle
-    thread_h[TH_EXIT_DATA] = utils:packArgs(...)
-    thread_h[TH_EXIT_STATUS] = SUCCESSFUL
-
-    -- Terminate the thread by NOT handling this exeption
-    error(SUCCESSFUL)
-end
-
--- function thread:getExitData(thread_h)
---     local fname = "thread:getExitData()"
---     validateHandle( thread_h )
-
---     if not thread_h then
---         local errorMsg = formatErrorMsg( utils:dbgPrefix(), L["THREAD_NOT_FOUND"], fname )
---         return nil, errorMsg
---     end
-
---     return utils:unpackArgs(thread_h[TH_EXIT_DATA])
--- end
-function thread:getState( H )
-    local fname = "thread:getState()"
- 
-    validateHandle( H )
-
-    local state = coroutine.status(H[TH_COROUTINE])
-    return state, nil
-end
-
 --[[@Begin
 *** Signature: 
     local delayInterval, errorMsg = thread:delay( delayInterval )
@@ -572,59 +476,73 @@ will have been restored.
 @End]]
 function thread:delay(tics)
     local fname = "thread:delay()"
-    
     if not tics or type(tics) ~= "number" then
         local errorMsg = formatErrorMsg( utils:dbgPrefix(), L["INVALID_TYPE"], fname)
 		return nil, errorMsg 
     end
-    validateHandle(RESUMING_THREAD)
     local H = RESUMING_THREAD
     
     -- Set delay and remove from TCB
     H[TH_REMAINING_TICS] = tics + H[TH_TICS_PER_YIELD]
+    local delaySecs = H[TH_REMAINING_TICS]/60
+
     coroutine.yield()
+    return H[TH_REMAINING_TICS], nil
 end
 
-local function threadIsSleeping(thread_h)
-    local targetId = thread_h[TH_UNIQUE_ID]
+local function isSleeping(thread_h)
     for _, entry in ipairs(sleepTable) do
-        if entry[TH_UNIQUE_ID] == targetId then
+        if entry[TH_UNIQUE_ID] == thread_h[TH_UNIQUE_ID] then
             return true
         end
     end
-
     return false
 end
-function thread:isSleeping(thread_h)
-    validateThread( thread_h )
-    return threadIsSleeping( thread_h )
+function thread:sleeping(thread_h)
+    local fname = "thread:sleeping()"
+    local errorMsg = nil 
+
+    if thread_h == nil then
+        errorMsg = formatErrorMsg( utils:dbgPrefix(), L["THREAD_HANDLE_NIL"], fname )
+        print( errorMsg )
+        return false, errorMsg 
+    end
+
+    validateHandle( thread_h )
+    if #sleepTable == 0 then
+        errorMsg = formatErrorMsg( fname, utils:dbgPrefix(), L["THREAD_NOT_FOUND"])
+        return false, errorMsg
+    end
+    local isAsleep, errorMsg = isSleeping( thread_h )
+    return isAsleep, errorMsg
 end
+local function wakeupThread(H)
+    local transferred = false
 
--- removes a thread from the TCB and inserts it into the sleep table. No adjustment
--- to the thread's yield tics.
-function thread:sleep()
-    local fname = "thread:sleep()"
-
-    validateHandle( RESUMING_THREAD )
-    local thread_h = RESUMING_THREAD
-
-    for i = 1, #threadControlBlock do
-        local entry = threadControlBlock[i]
-        if entry[TH_UNIQUE_ID] == thread_h[TH_UNIQUE_ID] then
-            table.remove( threadControlBlock, i )
-            table.insert( sleepTable, thread_h )
-            local logMsg = string.format("Thread[%d] moved from TCB into sleepTable.\n", thread_h[TH_UNIQUE_ID])
+    for i, entry in ipairs(sleepTable ) do
+        if entry[TH_UNIQUE_ID] == H[TH_UNIQUE_ID] then
+            table.remove( sleepTable, i ) 
+            table.insert( threadControlBlock, H )   
+            local logMsg = string.format("Thread[%d] moved from sleep table into thread control block.", H[TH_UNIQUE_ID])	
             dbgLog( utils:dbgPrefix(), logMsg )
-            coroutine.yield()
-            return true, nil
+            return true, nil      
         end
     end
     return false, L["THREAD_NOT_FOUND"]
 end
--- Moves a thread from the sleep table into the TCB
 function thread:wakeup( thread_h )
     local fname = "thread:wakeup()"
+    if thread_h == nil then
+        local errorMsg = formatErrorString( utils:dbgTrace(), L["THREAD_HANDLE_NIL"], fname )
+        return nil, errorMsg 
+    end
+    
     validateHandle( thread_h)
+
+    if #sleepTable == 0 then 
+        local errorMsg = formatErrorMsg( utils:dbgPrefix(), L["THREAD_NOT_FOUND"], fname )
+        return nil, errorMsg 
+    end
 
     local successful, errorMsg = wakeupThread( thread_h )
     if not successful then
@@ -633,6 +551,32 @@ function thread:wakeup( thread_h )
     end
     return true, nil
 end
+function thread:sleep()
+    local fname = "thread:sleep()"
+    local transferred = false
+
+    validateHandle( RESUMING_THREAD )
+    local H = RESUMING_THREAD
+    validateHandle(H)
+
+    for i = #threadControlBlock, 1, -1 do
+        local entry = threadControlBlock[i]
+        if entry[TH_UNIQUE_ID] == H[TH_UNIQUE_ID] then
+            table.remove( threadControlBlock, i )
+            table.insert( sleepTable, H )
+            transferred = true
+        end
+    end
+    if transferred then
+        local logMsg = string.format("Thread[%d] moved from TCB into sleepTable.\n", H[TH_UNIQUE_ID])
+        dbgLog( utils:dbgPrefix(), logMsg )
+        coroutine.yield()
+        return true, nil
+    end
+
+    return transferred, L["THREAD_NOT_FOUND"]
+end
+-- Moves a thread from the sleep table into the TCB
 
 --[[@Begin
 ### Signature:
@@ -673,12 +617,12 @@ function thread:getId(thread_h)
     local fname = "thread:getId()"
     
     if thread_h == nil then
-        validate( RESUMING_THREAD )
+        validateHandle( RESUMING_THREAD )
         thread_h = RESUMING_THREAD
     else
         validateHandle( thread_h )
     end
-    return thread_h[TH_UNIQUE_ID], nil
+    return thread_h[TH_UNIQUE_ID]
 end
 
 --[[@Begin
@@ -774,7 +718,7 @@ function thread:sendSignal( target_h, signal, ... )
         return false, errorMsg
     end
 
-    if threadIsSleeping(target_h) then
+    if isSleeping(target_h) then
         local errorMsg = formatErrorMsg( utils:dbgPrefix(), L["THREAD_IS_SLEEPING"], fname)
         return false, errorMsg
     end
@@ -881,14 +825,6 @@ function thread:getError(thread_h)
 
     return getCompletionError(thread_h)
 end
-
--- function thread:getResults( thread_h )
---     validateHandle(thread_h)
---     if thread_h[TH_EXECUTION_STATE] ~= "dead" then
---         return nil, L["THREAD_NOT_DEAD"]
---     end
---     return getCompletionResults(thread_h)
--- end
 function thread:getReturnValues( thread_h )
     validateHandle(thread_h)
     if thread_h[TH_EXECUTION_STATE] ~= "dead" then
