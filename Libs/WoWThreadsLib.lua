@@ -50,9 +50,10 @@ local TH_THREAD_PARENT      = 9
 local TH_STATE              = 10 -- "suspended", "dead"
 local TH_TIME_CREATED       = 11 -- timestamped from debugprofilestop()
 local TH_TIME_COMPLETED     = 12 -- timestamped from debugprofilestop()
-local TH_DEBUG_INFO         = 13
-local TH_COMPLETION_DATA    = 14 -- contain normal function return values
-local TH_COROUTINE_ERROR    = 15
+local TH_COMPLETION_DATA    = 13 -- contain normal function return values
+local TH_COROUTINE_ERROR    = 14
+local TH_DEBUG_INFO         = 15
+
 local TH_NUM_HANDLE_ELEMENTS = TH_COROUTINE_ERROR
 
 
@@ -150,9 +151,9 @@ local function dbgLog( prefix, logMsg )
     local logMsg = string.format("%s %s\n", colorize(prefix, 0, 1, 0.5), logMsg )
     post:message( logMsg )
 end
-local function formatErrorMsg( prefix, errorMsg, functionName )
-    local errorMsg = string.format("Error in %s (%s) - %s \n", functionName, prefix , errorMsg)
-    return errorMsg
+local function formatErrorMsg( prefix, msg, fn )
+    local errorMsg = string.format("Error in %s (%s) - %s\n", fn, prefix , msg )
+    return errorMsg 
 end
 
 local function insertStats( thread_h )
@@ -204,11 +205,14 @@ local function threadIsInMorgue( thread_h )
     end
 	return false
 end
-
-local EMPTY_SLOT = {}
-
+local function validateHandle(H)
+    assert(type(H)                      == "table",  string.format("Expected table, got %s\n", tostring(type(H) )))
+    assert(type(H[TH_COROUTINE])        == "thread", string.format("Expected thread, got %s\n", tostring( type(H[TH_COROUTINE] ))))
+    assert(type(H[TH_PENDING_SIGNALS])  == "table",  string.format("Expected table, got %s\n", tostring( type(H[TH_PENDING_SIGNALS] ))))
+    assert(type(H[TH_CHILDREN])         == "table",  string.format("Expected table, got %s\n", tostring( type(H[TH_CHILDREN] ))))
+    assert(type(H[TH_DEBUG_INFO])       == "table",  string.format("Expected Table, got %s\n", tostring( type(H[TH_DEBUG_INFO] ))))    -- assert(#H == TH_NUM_HANDLE_ELEMENTS )
+end
 local function createHandle( yieldInterval, func, ...)
-
     if yieldInterval < DEFAULT_YIELD_TICS then
         yieldInterval = DEFAULT_YIELD_TICS
     end
@@ -217,7 +221,7 @@ local function createHandle( yieldInterval, func, ...)
 
     THREAD_SEQUENCE_ID = THREAD_SEQUENCE_ID + 1
 
-    local H = {
+    local threadHandle = {
         [TH_COROUTINE]          = coroutine.create(func),
         [TH_COROUTINE_ARGS]     = packedArgs,
         [TH_UNIQUE_ID]          = THREAD_SEQUENCE_ID,
@@ -226,17 +230,19 @@ local function createHandle( yieldInterval, func, ...)
         [TH_REMAINING_TICS]     = 1,
         [TH_RESUMPTIONS]        = 0,
         [TH_CHILDREN]           = {},
-        [TH_THREAD_PARENT]      = EMPTY_SLOT,
+        [TH_THREAD_PARENT]      = {},
         [TH_STATE]              = "suspended",
         [TH_TIME_CREATED]       = debugprofilestop(),
         [TH_TIME_COMPLETED]     = 0,
-        [TH_COROUTINE_ERROR]    = EMPTY_SLOT,
+        [TH_COMPLETION_DATA]    = {},
+        [TH_COROUTINE_ERROR]    = {},
         [TH_DEBUG_INFO] = {
             startupArgs = utils:copyPackedArgs( packedArgs ),
             errors = {}, -- error = {errorMsg, stackTrace}
-            }
+            },
         }
-    return H
+        validateHandle(threadHandle)
+    return threadHandle
 end
 local function moveToMorgue( thread_h )
     for i, entry in ipairs( threadControlBlock ) do
@@ -249,13 +255,6 @@ local function moveToMorgue( thread_h )
         end
     end
     return false, L["THREAD_NOT_FOUND"]
-end
-local function validateHandle(H)
-    assert(type(H)                      == "table",  string.format("Expected table, got %s\n", tostring(type(H) )))
-    assert(type(H[TH_COROUTINE])        == "thread", string.format("Expected thread, got %s\n", tostring( type(H[TH_COROUTINE] ))))
-    assert(type(H[TH_PENDING_SIGNALS])  == "table",  string.format("Expected table, got %s\n", tostring( type(H[TH_PENDING_SIGNALS] ))))
-    assert(type(H[TH_CHILDREN])         == "table",  string.format("Expected table, got %s\n", tostring( type(H[TH_CHILDREN] ))))
-    assert(type(H[TH_DEBUG_INFO])       == "table",  string.format("Expected Table, got %s\n", tostring( type(H[TH_DEBUG_INFO] ))))    -- assert(#H == TH_NUM_HANDLE_ELEMENTS )
 end
 local function signalIsValid(signal)
     if signal == nil then
@@ -404,39 +403,45 @@ function thread:create( yieldInterval, someFunction,... )
     local parent_h = nil
 
     if yieldInterval == nil then
+        utils:dbgPrint("ERROR")
         local location = string.format("%s at %s\n", fname, utils:dbgPrefix() )
         local errorMsg = L["PARAMETER_NIL"]
         return nil, errorMsg 
     end
 
     if type( yieldInterval) ~= "number" then
-        local location = string.format("%s at %s\n", fname, utils:dbgPrefix())
+        utils:dbgPrint("ERROR")
+        local location = string.format("%s at %s\n", fname, utils:dbgPrefix() )        local location = string.format("%s at %s\n", fname, utils:dbgPrefix())
         local errorMsg = L["INVALID_TYPE"]
         return nil, errorMsg 
     end
 
     if someFunction == nil then
-        local location = string.format("%s at %s\n", fname, utils:dbgPrefix())
+        utils:dbgPrint("ERROR")
+        local location = string.format("%s at %s\n", fname, utils:dbgPrefix() )        local location = string.format("%s at %s\n", fname, utils:dbgPrefix())
         local errorMsg = L["PARAMETER_NIL"]
         return nil, errorMsg 
     end
     if type(someFunction) ~= "function" then
-        local location = string.format("%s at %s\n", fname, utils:dbgPrefix())
+        utils:dbgPrint("ERROR")
+        local location = string.format("%s at %s\n", fname, utils:dbgPrefix() )        local location = string.format("%s at %s\n", fname, utils:dbgPrefix())
         local errorMsg = L["INVALID_TYPE"]
         return nil, errorMsg 
     end
 
-    local H = createHandle( yieldInterval, someFunction, ... )
+    local handle = createHandle( yieldInterval, someFunction, ... )
+
     if RESUMING_THREAD ~= nil then
-        H[TH_THREAD_PARENT] = RESUMING_THREAD
-        table.insert( RESUMING_THREAD[TH_CHILDREN], H)
+        handle[TH_THREAD_PARENT] = RESUMING_THREAD
+        table.insert( RESUMING_THREAD[TH_CHILDREN], handle )
     end
 
-    table.insert( threadControlBlock, H )
 
-    local logMsg = string.format( "Thread[%d] inserted into TCB.",H[TH_UNIQUE_ID])
+    table.insert( threadControlBlock, handle )
+
+    local logMsg = string.format( "Thread[%d] inserted into TCB.",handle[TH_UNIQUE_ID])
     dbgLog( utils:dbgPrefix(), logMsg )
-    return H, nil
+    return handle, nil
 end
 --[[@Begin
 ### Signature: 
@@ -530,18 +535,45 @@ local function wakeupThread(H)
     end
     return false, L["THREAD_NOT_FOUND"]
 end
+function thread:isSleeping( thread_h )
+    local fname = "thread:wakeup()"
+    local errorMsg = nil
+
+    if thread_h == nil then
+        errorMsg = formatErrorMsg(utils:dbgPrefix(), L["THREAD_HANDLE_NIL"], fname )
+        return false, errorMsg
+    end
+    
+    local ret1, errorMsg = pcall( validateHandle, thread_h )
+    if not ret1 then
+        errorMsg = formatErrorMsg(utils:dbgPrefix(), errorMsg, fname )
+        return false, errorMsg
+    end
+    
+    if not isInSleepTable( thread_h ) then
+        errorMsg = formatErrorMsg( utils:dbgPrefix(), L["THREAD_NOT_SLEEPING"], fname )
+        return false, errorMsg
+    end
+    return true, nil
+
+end
 function thread:wakeup( thread_h )
     local fname = "thread:wakeup()"
     local errorMsg = nil
 
     if thread_h == nil then
-        errorMsg = formatErrorMsg(utils:dbgPrefix(), errorMsg, fname )
+        errorMsg = formatErrorMsg(utils:dbgPrefix(), L["THREAD_HANDLE_NIL"], fname )
         return false, errorMsg
     end
-
+    
     local ret1, errorMsg = pcall( validateHandle, thread_h )
     if not ret1 then
         errorMsg = formatErrorMsg(utils:dbgPrefix(), errorMsg, fname )
+        return false, errorMsg
+    end
+    
+    if not isInSleepTable( thread_h ) then
+        errorMsg = formatErrorMsg( utils:dbgPrefix(), L["THREAD_NOT_SLEEPING"], fname )
         return false, errorMsg
     end
 
@@ -710,13 +742,14 @@ inserted into the target thread's signal queue.
 @End]]
 function thread:sendSignal( target_h, signal, ... )
     local fname = "thread:sendSignal()"
+    local handleName, elapsedMs = ...
 
     local ret1, errorMsg = pcall( validateHandle, target_h )
     if not ret1 then
         post:message( string.format("%s in %s at %s\n",
                         L["THREAD_HANDLE_INVALID"], 
-                        fname, 
-                        utils:dbgPrefix()))
+                        fname, debugstack(2)))
+                        -- utils:dbgPrefix()))
         return nil, errorMsg
     end
 
