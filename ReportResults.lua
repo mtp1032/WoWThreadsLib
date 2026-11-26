@@ -21,7 +21,7 @@ end
 
 local SIG_READY             = thread.SIG_READY
 local SIG_START             = thread.SIG_START
-local SIG_COMPLETE          = thread.SIG_COMPLETE
+local SIG_TASK_COMPLETE          = thread.SIG_TASK_COMPLETE
 local SIG_ALERT             = thread.SIG_ALERT
 local SIG_CONDITION_MET     = thread.SIG_CONDITION_MET
 local SIG_CREATE_THREAD     = thread.SIG_CREATE_THREAD
