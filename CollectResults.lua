@@ -18,21 +18,26 @@ local thread = LibStub("WoWThreadsLib", localizedVersion )
 if not thread then
     error( L["THREAD_LIB_NOT_FOUND"] )
 end
+local SIG_READY           = thread.SIG_READY
+local SIG_START           = thread.SIG_START
+local SIG_STOP            = thread.SIG_STOP 
+local SIG_TASK_COMPLETE   = thread.SIG_TASK_COMPLETE
+local SIG_ALERT           = thread.SIG_ALERT
+local SIG_CONDITION_MET   = thread.SIG_CONDITION_MET
+local SIG_TERMINATE       = thread.SIG_TERMINATE
+local SIG_NONE_PENDING    = thread.SIG_NONE_PENDING
 
-local SIG_START             = thread.SIG_START
-local SIG_COMPLETE          = thread.SIG_COMPLETE
-local SIG_TERMINATE         = thread.SIG_TERMINATE
+local function displayResults( testTitle, testResults )
 
-local function displayResults( testResults )
-
-    post:message( string.format("==========================\n") )
-    post:message( string.format("           TEST RESULTS\n"))
-    post:message( string.format("==========================\n"))
+    post:message( string.format("===============================\n") )
+    post:message( string.format("           %s\n", testTitle ))
+    post:message( string.format("===============================\n"))
 
     for i = 1, #testResults do
         local rec = testResults[i]
-        post:message( string.format("%s: %s\n%s\n\n", rec[1], rec[2], rec[3] ))
+        post:message( string.format("%s: %s\n%s\n", rec[1], rec[2], rec[3] ))
     end
+    post:message( string.format("\n"))
 end
 
 local function collectData()
@@ -45,9 +50,9 @@ local function collectData()
         while not DONE do
             thread:yield()
             
-            local signal, sender_h, testResults = thread:getSignal()
-            if signal == SIG_COMPLETE then
-                displayResults( testResults)
+            local signal, sender_h, testTitle, testResults = thread:getSignal()
+            if signal == SIG_TASK_COMPLETE then
+                displayResults( testTitle, testResults)
                 DONE = true
             end
             if signal == SIG_TERMINATE then
@@ -62,7 +67,7 @@ function collect:getCollectorHandle()
     local errorMsg = nil
 
     if not collector_h then
-    collector_h, errorMsg = thread:create( 50, collectData )
+        collector_h, errorMsg = thread:create( 50, collectData )
         assert( collector_h, errorMsg )
     end
     return collector_h, errorMsg
