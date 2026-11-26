@@ -41,7 +41,7 @@ if LOCALE == "enUS" then
     L["THREAD_LIB_NOT_FOUND"]       = "WoW Threads Library not found. "
     L["THREAD_STATE_IS_DEAD"]       = "It's dead, Jim. "
     L["THREAD_IS_SLEEPING"]         = "Thread sleeping and cannot proceed."
-    L["THREAD_NOT_SLEEPING"]        = "Thread is sleeping and cannont be signaled. "
+    L["THREAD_NOT_SLEEPING"]        = "Thread is sleeping and cannot be signaled. "
     L["SLEEP_TABLE_EMPTY"]          = "Sleep table is empty. "
     L["THREAD_EXIT_NORMAL"]         = "Thread exited normally. "
     L["THREAD_EXIT_ERROR"]          = "Thread exited with error. "
