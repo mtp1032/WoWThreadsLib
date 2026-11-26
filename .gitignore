@@ -1,17 +1,7 @@
 #===========================================================
 # 3. WoW SavedVariables (never commit these)
 #===========================================================
-Logs/
-Screenshots/
 Archives/
 DevNotes/
-Templates/
 Prototypes/
 Working/
-#===========================================================
-# 7. GitHub Desktop / editor backups
-#===========================================================
-*.orig
-*.backup
-*.swp
-*.swo
