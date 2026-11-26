@@ -10,7 +10,7 @@ local core = ns.Core
 
 local MAJOR = 0
 local MINOR = 9
-local PATCH = 3
+local PATCH = 5
 local gitVersion = MAJOR * 10000 + MINOR * 100 + PATCH
 local localizedVersion = string.format("%d.%d.%d", MAJOR, MINOR, PATCH)  
 -----------------------------------------------------------------
